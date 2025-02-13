@@ -3,18 +3,26 @@
 #include "ECUHardware.h"
 #include "ECULoRa.h"
 
-const int ledPin = 13; // Pin number for the LED
-
 void setup() {
-    // Initialize the digital pin as an output.
-    pinMode(ledPin, OUTPUT);
-
     Serial.begin(115200);
 
     delay(3000);
 
     Serial.println("Starting ECU...");
-    if (!ECULoRaInit(LORA_LEADER, 1000, LORA_CS, RESET_PIN, LORA_INT, &SPI, LORA_SCK, LORA_MISO, LORA_MOSI)) {
+    if (!ECULoRaInit(
+            LORA_LEADER, 
+            1000, 
+            ECU_LORA_CS, 
+            ECU_LORA_RST, 
+            ECU_LORA_INT, 
+            &SPI, 
+            ECU_LORA_SCK, 
+            ECU_LORA_MISO, 
+            ECU_LORA_MOSI,
+            LORA_FREQ, 
+            LORA_BW, 
+            LORA_SF, 
+            LORA_POWER)) {
         Serial.println("LoRa Initialization Failed!");
     } else {
         Serial.println("LoRa Initialized Successfully!");
@@ -24,10 +32,8 @@ void setup() {
 
 void loop() {
     static int counter = 0;
-    digitalWrite(ledPin, HIGH); // Turn the LED on (HIGH is the voltage level)
-    delay(1000);                // Wait for a second
-    digitalWrite(ledPin, LOW);  // Turn the LED off by making the voltage LOW
-    delay(1000);                // Wait for a second
+    delay(1000);                                          // Wait for a second
+
     Serial.println(String("Counter: ") + counter);
     counter++;
     ECULoRaMsg_t msg;
