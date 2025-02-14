@@ -1,38 +1,18 @@
 #include <Arduino.h>
-#include <SPI.h>
-#include "ECUHardware.h"
-#include "ECULoRa.h"
+#include "ECU_Lib.h"
 
 void setup() {
     Serial.begin(115200);
-
     delay(3000);
 
     Serial.println("Starting ECU...");
-    if (!ECULoRaInit(
-            LORA_LEADER, 
-            1000, 
-            ECU_LORA_CS, 
-            ECU_LORA_RST, 
-            ECU_LORA_INT, 
-            &SPI, 
-            ECU_LORA_SCK, 
-            ECU_LORA_MISO, 
-            ECU_LORA_MOSI,
-            LORA_FREQ, 
-            LORA_BW, 
-            LORA_SF, 
-            LORA_POWER)) {
-        Serial.println("LoRa Initialization Failed!");
-    } else {
-        Serial.println("LoRa Initialized Successfully!");
-    }
+    initializeECU();
 
 }
 
 void loop() {
     static int counter = 0;
-    delay(1000);                                          // Wait for a second
+    delay(1000);
 
     Serial.println(String("Counter: ") + counter);
     counter++;
@@ -50,4 +30,32 @@ void loop() {
     } else {
         Serial.println("Failed to transmit LoRa.");
     }
+
+    // Toggle the 12V
+    enable12V((counter % 10) < 5);
+
+    // Get the board health
+    ECUBoardHealth_t boardVals;
+    getBoardHealth(boardVals);
+
+    String s;
+    s = "V5:";
+    s += boardVals.V5;
+    s += ", ";
+    //s += "12V_I:";
+    //s += analogRead(pin12V_IMON);
+    //s += ", ";
+    s += "V12:";
+    s += boardVals.V12;
+    s += ", ";
+    s += "Temp(C):";
+    s += boardVals.TempC;
+    s += ", ";
+    s += "V56:";
+    s += boardVals.V56;
+    s += ", ";
+    s += "I_SW:";
+    s += boardVals.ISW;
+    Serial.println(s);
+
 }
