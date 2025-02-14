@@ -6,7 +6,7 @@ void setup() {
     delay(3000);
 
     Serial.println("Starting ECU...");
-    initializeECU();
+    initializeECU(1000);
 
 }
 

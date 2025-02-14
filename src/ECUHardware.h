@@ -15,18 +15,29 @@
 #define LORA_SF             9
 #define LORA_POWER          19
 
+// Digital output port to enable RS41
 #define RS41_EN             2
+// Digital output port to enable 12V power supply
 #define V12_EN              5
 
+// Digital output port to enable high resolution current sense
 #define SW_I_HRES_EN        6
+// Digital output port to enable current sense
 #define SW_IMON_EN          7
+// Digital output port to enable fault
 #define SW_FAULT            8
 
+// A/D port for Zephr voltage monitor
 #define V_ZEPHR_VMON        20
+// A/D port for 12V monitor
 #define V12_MON             21
+// OneWire port for DS18B20 temperature sensor
 #define DS18_TEMP           22
+// A/D port for current sense
 #define SW_IMON             23
+// A/D port for 5V monitor
 #define V5_MON              24
+// Digital output port to disable heater
 #define HEATER_DISABLE      37
 
 //Standard current sense ratio, see p.9:

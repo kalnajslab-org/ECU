@@ -8,19 +8,21 @@
 #define DS_RESOLUTION 12
 
 static OneWire oneWire(DS18_TEMP);
-static DallasTemperature ds(&oneWire);
+static DallasTemperature ds18(&oneWire);
 
 //Resistance values in kOhms
-static float R5 = 499.0;
-static float R6 = 10.0;
-static float R13 = 30.0;
-static float R14 = 10.0;
-static float R15 = 48.7;
-static float R16 = 10.0;
+#define R5  499.0
+#define R6  10.0
+#define R13 30.0
+#define R14 10.0
+#define R15 48.7
+#define R16 10.0
 
-bool initializeECU() {
+bool initializeECU(int lora_report_interval_ms) {
 
     bool success = true;
+
+    // Initialize the digital pins
     pinMode(RS41_EN, OUTPUT);
     pinMode(V12_EN, OUTPUT);
     pinMode(SW_I_HRES_EN,OUTPUT);
@@ -30,17 +32,21 @@ bool initializeECU() {
     pinMode(V5_MON,INPUT);
     pinMode(HEATER_DISABLE,OUTPUT);
 
+    // Disable the 12V
     enable12V(false);
 
-    ds.begin();
-    ds.setResolution(DS_RESOLUTION);
-  
-    ds.setWaitForConversion(false);
-    ds.requestTemperatures();
+    // Configure the DS18B20 temperature sensor
+    ds18.begin();
+    ds18.setResolution(DS_RESOLUTION);
+    ds18.setWaitForConversion(false);
 
+    // Start the temperature conversion
+    ds18.requestTemperatures();
+
+    // Initialize the LoRa module
     if (!ECULoRaInit(
             LORA_LEADER, 
-            1000, 
+            lora_report_interval_ms, 
             ECU_LORA_CS, 
             ECU_LORA_RST, 
             ECU_LORA_INT, 
@@ -64,9 +70,9 @@ bool initializeECU() {
 void getBoardHealth(ECUBoardHealth_t& boardVals) {
     static float last_temp = -1000.0;
 
-    if (ds.getCheckForConversion()) {
-        last_temp = ds.getTempCByIndex(0);
-        ds.requestTemperatures();
+    if (ds18.isConversionComplete()) {
+        last_temp = ds18.getTempCByIndex(0);
+        ds18.requestTemperatures();
     }
     boardVals.TempC = last_temp;
 
@@ -74,8 +80,7 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
     if (I_HRES) {
       K_SNS = K_SNS2;
       digitalWrite(SW_I_HRES_EN,HIGH);
-    }
-    else {
+    } else {
       K_SNS = K_SNS1;
     }
 
