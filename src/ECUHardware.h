@@ -15,6 +15,10 @@
 #define LORA_SF             9
 #define LORA_POWER          19
 
+// GPS
+#define ECU_GPS_SERIAL          Serial8
+#define ECU_GPS_BAUD            9600
+
 // Digital output port to enable RS41
 #define RS41_EN             2
 // Digital output port to enable 12V power supply

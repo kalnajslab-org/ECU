@@ -32,8 +32,8 @@ bool initializeECU(int lora_report_interval_ms) {
     pinMode(V5_MON,INPUT);
     pinMode(HEATER_DISABLE,OUTPUT);
 
-    // Disable the 12V
-    enable12V(false);
+    // Enable the 12V
+    enable12V(true);
 
     // Configure the DS18B20 temperature sensor
     ds18.begin();
