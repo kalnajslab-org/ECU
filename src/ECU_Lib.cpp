@@ -74,7 +74,7 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
         last_temp = ds18.getTempCByIndex(0);
         ds18.requestTemperatures();
     }
-    boardVals.TempC = last_temp;
+    boardVals.BoardTempC = last_temp;
 
     float K_SNS;
     if (I_HRES) {

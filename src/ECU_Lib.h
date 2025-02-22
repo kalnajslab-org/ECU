@@ -18,7 +18,7 @@ struct ECUBoardHealth_t {
     float V5;
     float V56;
     float ISW;
-    float TempC;
+    float BoardTempC;
 };
 
 /**

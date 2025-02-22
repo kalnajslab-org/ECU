@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include <TinyGPSPlus.h>
 #include "ECUHardware.h"
+#include "ECUReport.h"
 #include "ECU_Lib.h"
 
 TinyGPSPlus ecu_gps;
+ECUReport_t ecu_report;
 
 void setup() {
     Serial.begin(115200);
@@ -14,12 +16,14 @@ void setup() {
     Serial.println("Starting ECU...");
     initializeECU(1000);
 
+    ecu_report_init(ecu_report);
 }
 
 void loop() {
     static int counter = 0;
     delay(1000);
 
+    Serial.println("--------------------");
     Serial.println(String("Counter: ") + counter);
     counter++;
     ECULoRaMsg_t msg;
@@ -28,15 +32,8 @@ void loop() {
         for (int i = 0; i < msg.data_len; i++) {
             received_msg += (char)msg.data[i];
         }
-        Serial.println(String("Received: ") + received_msg);
+        Serial.println(String("**** Received: ") + received_msg);
     }
-    String data_str = "ECU data at a RATS near you!";
-    if (ecu_lora_tx((uint8_t*)data_str.begin(), data_str.length())) {
-        Serial.println(data_str + " transmitted successfully");
-    } else {
-        Serial.println("Failed to transmit LoRa.");
-    }
-
     while (ECU_GPS_SERIAL.available() > 0)
     {
         if(ecu_gps.encode(ECU_GPS_SERIAL.read())) {
@@ -63,12 +60,11 @@ void loop() {
             Serial.println();
         }
     }
-
     // Get the board health
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
 
-    if (boardVals.TempC > 30.0) {
+    if (boardVals.BoardTempC > 30.0) {
         digitalWrite(HEATER_DISABLE, HIGH);
     } else {
         digitalWrite(HEATER_DISABLE, LOW);
@@ -84,7 +80,7 @@ void loop() {
     s += boardVals.V12;
     s += ", ";
     s += "Temp(C):";
-    s += boardVals.TempC;
+    s += boardVals.BoardTempC;
     s += ", ";
     s += "V56:";
     s += boardVals.V56;
@@ -94,5 +90,22 @@ void loop() {
     s += ", HeaterOn:";
     s += !digitalRead(HEATER_DISABLE);
     Serial.println(s);
+    Serial.println();
+
+    add_status(!digitalRead(HEATER_DISABLE), ecu_report);
+
+    add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, ecu_report);
+
+    add_gps(ecu_gps.location.isValid(), ecu_gps.location.lat(), ecu_gps.location.lng(), ecu_gps.altitude.meters(), ecu_report);
+    
+    ecu_report_print(&ecu_report);
+    Serial.println();
+
+    etl::array<uint8_t, ECU_REPORT_SIZE_BYTES> data = ecu_report_serialize(ecu_report);
+    if (ecu_lora_tx(data.begin(), data.size())) {
+        Serial.println("Data transmitted successfully");
+    } else {
+        Serial.println("Failed to transmit LoRa.");
+    }
 
 }
