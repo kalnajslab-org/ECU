@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "ECULoRa.h"
+#include "etl/vector.h"
 
 // ECU_Lib uses the DalaasTemperature library to access the DS18B20 sensor
 // It seems to be much more robust and functional than the Arduino DS18B20 library:
@@ -20,6 +21,9 @@ struct ECUBoardHealth_t {
     float ISW;
     float BoardTempC;
 };
+
+// The TSEN message length is 19 characters, plus one for the null terminator
+#define TSEN_MSG_LEN 20
 
 /**
  * @brief Initializes the ECU (Electronic Control Unit).
@@ -50,5 +54,10 @@ void getBoardHealth(ECUBoardHealth_t& boardVals);
  * @param enable true to enable the 12V power supply, false to disable it.
  */
 void enable12V(bool enable);
+
+void tsen_prompt();
+
+typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
+TSEN_DATA_VECTOR tsen_read();
 
 #endif // ECU_LIB_H

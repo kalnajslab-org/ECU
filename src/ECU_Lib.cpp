@@ -20,6 +20,9 @@ static DallasTemperature ds18(&oneWire);
 
 bool initializeECU(int lora_report_interval_ms) {
 
+    ECU_GPS_SERIAL.begin(ECU_GPS_BAUD);
+    ECU_TSEN_SERIAL.begin(ECU_TSEN_BAUD);
+
     bool success = true;
 
     // Initialize the digital pins
@@ -42,6 +45,9 @@ bool initializeECU(int lora_report_interval_ms) {
 
     // Start the temperature conversion
     ds18.requestTemperatures();
+
+    // Request TSEN data
+    tsen_prompt();
 
     // Initialize the LoRa module
     if (!ECULoRaInit(
@@ -98,3 +104,46 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
   void enable12V(bool enable) {
     digitalWrite(V12_EN, enable);
   }
+
+  void tsen_prompt() {
+    ECU_TSEN_SERIAL.print("*01A?\r");
+    ECU_TSEN_SERIAL.flush();
+}
+
+TSEN_DATA_VECTOR tsen_read() {
+    static TSEN_DATA_VECTOR empty_msg;
+    static TSEN_DATA_VECTOR msg;
+    int i = 0;
+    while (ECU_TSEN_SERIAL.available() > 0) {
+        char c = ECU_TSEN_SERIAL.read();
+        SerialUSB.print(i++);
+        SerialUSB.print(":");
+        SerialUSB.print(c, HEX);
+        // Wait for start character
+        if (msg.empty() && (c != '*')) {
+            continue;
+        }
+        msg.push_back(c);
+        if ((c == '\r') or msg.full()) {
+            break;
+        }
+    }
+
+    if (!msg.full()) {
+        msg.push_back('\0');
+    }
+
+    if ((msg.full()) && (msg[TSEN_MSG_LEN-1] != '\r')) {
+        SerialUSB.println("TSEN message not terminated with \\r");
+        return empty_msg;
+    }
+
+    if (msg.full()) {
+        TSEN_DATA_VECTOR ret_val = msg;
+        tsen_prompt();
+        msg.clear();
+        return ret_val;
+    }
+
+    return empty_msg;
+}

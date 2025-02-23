@@ -11,8 +11,6 @@ void setup() {
     Serial.begin(115200);
     delay(3000);
 
-    ECU_GPS_SERIAL.begin(9600);
-    
     Serial.println("Starting ECU...");
     initializeECU(1000);
 
@@ -60,6 +58,14 @@ void loop() {
             Serial.println();
         }
     }
+
+//    TSEN_DATA_VECTOR tsen_data = tsen_read();
+//        Serial.println("TSEN Data:");
+//        for (int i = 0; i < tsen_data.size(); i++) {
+//            Serial.print(tsen_data[i]);
+//        }
+//        Serial.println();
+
     // Get the board health
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
