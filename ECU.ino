@@ -104,14 +104,12 @@ void loop() {
 
     add_gps(ecu_gps.location.isValid(), ecu_gps.location.lat(), ecu_gps.location.lng(), ecu_gps.altitude.meters(), ecu_report);
     
-    ecu_report_print(&ecu_report);
-    Serial.println();
-
-    etl::array<uint8_t, ECU_REPORT_SIZE_BYTES> data = ecu_report_serialize(ecu_report);
-    if (ecu_lora_tx(data.begin(), data.size())) {
-        Serial.println("Data transmitted successfully");
-    } else {
+    etl::array<uint8_t, ECU_REPORT_SIZE_BYTES> payload = ecu_report_serialize(ecu_report);
+    if (!ecu_lora_tx(payload.begin(), payload.size())) {
         Serial.println("Failed to transmit LoRa.");
     }
 
+    ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
+    ecu_report_print(&ecu_report_sent);
+    Serial.println();
 }
