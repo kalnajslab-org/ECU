@@ -102,7 +102,16 @@ void loop() {
 
     add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, ecu_report);
 
-    add_gps(ecu_gps.location.isValid(), ecu_gps.location.lat(), ecu_gps.location.lng(), ecu_gps.altitude.meters(), ecu_report);
+    add_gps(
+        ecu_gps.location.isValid(),
+        ecu_gps.location.lat(),
+        ecu_gps.location.lng(),
+        ecu_gps.altitude.meters(),
+        ecu_gps.satellites.value(),
+        ecu_gps.hdop.hdop(),
+        ecu_gps.location.age() / 1000,
+        ecu_report
+    );
     
     etl::array<uint8_t, ECU_REPORT_SIZE_BYTES> payload = ecu_report_serialize(ecu_report);
     if (!ecu_lora_tx(payload.begin(), payload.size())) {
@@ -110,6 +119,6 @@ void loop() {
     }
 
     ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
-    ecu_report_print(&ecu_report_sent);
+    ecu_report_print(ecu_report_sent);
     Serial.println();
 }
