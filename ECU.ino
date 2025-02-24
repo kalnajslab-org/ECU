@@ -113,7 +113,7 @@ void loop() {
         ecu_report
     );
     
-    etl::array<uint8_t, ECU_REPORT_SIZE_BYTES> payload = ecu_report_serialize(ecu_report);
+    ECUReportBytes_t payload = ecu_report_serialize(ecu_report);
     if (!ecu_lora_tx(payload.begin(), payload.size())) {
         Serial.println("Failed to transmit LoRa.");
     }
