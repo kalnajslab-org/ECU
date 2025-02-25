@@ -3,16 +3,19 @@
 #include "ECUHardware.h"
 #include "ECUReport.h"
 #include "ECU_Lib.h"
+#include "RS41.h"
 
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
+RS41 rs41(RS41_SERIAL, RS41_EN);
+
 
 void setup() {
     Serial.begin(115200);
     delay(3000);
 
     Serial.println("Starting ECU...");
-    initializeECU(1000);
+    initializeECU(1000, rs41);
 
     ecu_report_init(ecu_report);
 }
@@ -24,6 +27,8 @@ void loop() {
     Serial.println("--------------------");
     Serial.println(String("Counter: ") + counter);
     counter++;
+
+    // LoRa incoming message
     ECULoRaMsg_t msg;
     if (ecu_lora_rx(&msg)) {
         String received_msg;
@@ -65,6 +70,50 @@ void loop() {
 //            Serial.print(tsen_data[i]);
 //        }
 //        Serial.println();
+
+    // RS41
+    RS41::RS41SensorData_t sensor_data = rs41.decoded_sensor_data(false);
+    if (sensor_data.valid)
+    {
+        SerialUSB.print(sensor_data.frame_count);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.air_temp_degC);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.humdity_percent);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.hsensor_temp_degC);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.pres_mb);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.internal_temp_degC);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.module_status);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.module_error);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.pcb_supply_V);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.lsm303_temp_degC);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.pcb_heater_on);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.mag_hdgXY_deg);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.mag_hdgXZ_deg);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.mag_hdgYZ_deg);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.accelX_mG);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.accelY_mG);
+        SerialUSB.print(",");
+        SerialUSB.print(sensor_data.accelZ_mG);
+        SerialUSB.println();
+    }
+    else
+    {
+        SerialUSB.println("Unable to obtain RS41 sensor data");
+    }
 
     // Get the board health
     ECUBoardHealth_t boardVals;
@@ -119,6 +168,6 @@ void loop() {
     }
 
     ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
-    ecu_report_print(ecu_report_sent);
+    ecu_report_print(ecu_report_sent, true);
     Serial.println();
 }

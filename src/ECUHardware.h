@@ -16,15 +16,17 @@
 #define LORA_POWER          19
 
 // GPS
-#define ECU_GPS_SERIAL          Serial8
-#define ECU_GPS_BAUD            9600
+#define ECU_GPS_SERIAL      Serial8
+#define ECU_GPS_BAUD        9600
 
 // TSEN
-#define ECU_TSEN_SERIAL         Serial4
-#define ECU_TSEN_BAUD           9600
+#define ECU_TSEN_SERIAL     Serial4
+#define ECU_TSEN_BAUD       9600
 
-// Digital output port to enable RS41
+// RS41
+#define RS41_SERIAL         Serial1
 #define RS41_EN             2
+
 // Digital output port to enable 12V power supply
 #define V12_EN              5
 

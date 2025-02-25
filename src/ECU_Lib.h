@@ -2,7 +2,9 @@
 #define ECU_LIB_H
 
 #include <Arduino.h>
+#include "ECUHardware.h"
 #include "ECULoRa.h"
+#include "RS41.h"
 #include "etl/vector.h"
 
 // ECU_Lib uses the DalaasTemperature library to access the DS18B20 sensor
@@ -33,7 +35,7 @@ struct ECUBoardHealth_t {
  * @param lora_report_interval_ms The shortest interval in milliseconds at which the ECU should report via LoRa.
  * @return true if the initialization was successful, false otherwise.
  */
-bool initializeECU(int lora_report_interval_ms);
+bool initializeECU(int lora_report_interval_ms, RS41& rs41);
 
 /**
  * @brief Gets the health of the ECU board.

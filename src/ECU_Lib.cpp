@@ -2,7 +2,6 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <SPI.h>
-#include "ECUHardware.h"
 #include "ECULoRa.h"
 
 #define DS_RESOLUTION 12
@@ -18,7 +17,7 @@ static DallasTemperature ds18(&oneWire);
 #define R15 48.7
 #define R16 10.0
 
-bool initializeECU(int lora_report_interval_ms) {
+bool initializeECU(int lora_report_interval_ms, RS41& rs41) {
 
     ECU_GPS_SERIAL.begin(ECU_GPS_BAUD);
     ECU_TSEN_SERIAL.begin(ECU_TSEN_BAUD);
@@ -26,7 +25,6 @@ bool initializeECU(int lora_report_interval_ms) {
     bool success = true;
 
     // Initialize the digital pins
-    pinMode(RS41_EN, OUTPUT);
     pinMode(V12_EN, OUTPUT);
     pinMode(SW_I_HRES_EN,OUTPUT);
     pinMode(SW_IMON_EN,OUTPUT);
@@ -37,6 +35,9 @@ bool initializeECU(int lora_report_interval_ms) {
 
     // Enable the 12V
     enable12V(true);
+
+    // Initialize the RS41
+    rs41.init();
 
     // Configure the DS18B20 temperature sensor
     ds18.begin();
