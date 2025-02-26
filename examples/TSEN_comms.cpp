@@ -26,7 +26,6 @@ void loop() {
   if (SerialUSB.available()) {        // If anything comes in Serial (USB),
     char c = SerialUSB.read();
     ECU_TSEN_SERIAL.write(c);  // read it and send it out Serial1 (pins 0 & 1)
-    SerialUSB.write(c);
   }
 
   if (ECU_TSEN_SERIAL.available()) {       // If anything comes in Serial1 (pins 0 & 1)
