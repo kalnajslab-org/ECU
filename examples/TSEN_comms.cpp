@@ -23,12 +23,12 @@ void loop() {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 
-  if (SerialUSB.available()) {        // If anything comes in Serial (USB),
+  if (SerialUSB.available()) {
     char c = SerialUSB.read();
-    ECU_TSEN_SERIAL.write(c);  // read it and send it out Serial1 (pins 0 & 1)
+    ECU_TSEN_SERIAL.write(c);  
   }
 
-  if (ECU_TSEN_SERIAL.available()) {       // If anything comes in Serial1 (pins 0 & 1)
-    SerialUSB.write(ECU_TSEN_SERIAL.read());  // read it and send it out Serial (USB)
+  if (ECU_TSEN_SERIAL.available()) {
+    SerialUSB.write(ECU_TSEN_SERIAL.read());
   }
 }
