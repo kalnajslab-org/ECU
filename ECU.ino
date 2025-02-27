@@ -17,13 +17,15 @@ void setup() {
     Serial.println("Starting ECU...");
     initializeECU(1000, rs41);
 
-    ecu_report_init(ecu_report);
 }
 
 void loop() {
     static int counter = 0;
     static int missed_tsen = 0;
     delay(1000);
+
+    // Initialize the ECU report
+    ecu_report_init(ecu_report);
 
     Serial.println("--------------------");
     Serial.println(String("Counter: ") + counter);
@@ -62,6 +64,17 @@ void loop() {
             Serial.print(" Course:");
             Serial.print(ecu_gps.course.deg());
             Serial.println();
+            add_gps(
+                ecu_gps.location.isValid(),
+                ecu_gps.location.lat(),
+                ecu_gps.location.lng(),
+                ecu_gps.altitude.meters(),
+                ecu_gps.satellites.value(),
+                ecu_gps.hdop.hdop(),
+                ecu_gps.location.age() / 1000,
+                ecu_report
+            );
+        
         }
     }
 
@@ -139,7 +152,6 @@ void loop() {
         SerialUSB.println("Unable to obtain RS41 sensor data");
     }
 
-    // Get the board health
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
 
@@ -171,26 +183,19 @@ void loop() {
     Serial.println(s);
     Serial.println();
 
+    // Add the board status
     add_status(!digitalRead(HEATER_DISABLE), ecu_report);
 
+    // Add the board health
     add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, ecu_report);
 
-    add_gps(
-        ecu_gps.location.isValid(),
-        ecu_gps.location.lat(),
-        ecu_gps.location.lng(),
-        ecu_gps.altitude.meters(),
-        ecu_gps.satellites.value(),
-        ecu_gps.hdop.hdop(),
-        ecu_gps.location.age() / 1000,
-        ecu_report
-    );
-    
+    // Serialize and transmit the ECU report
     ECUReportBytes_t payload = ecu_report_serialize(ecu_report);
     if (!ecu_lora_tx(payload.begin(), payload.size())) {
         Serial.println("Failed to transmit LoRa.");
     }
 
+    // Deserialize and print the ECU report
     ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
     ecu_report_print(ecu_report_sent, true);
     Serial.println();
