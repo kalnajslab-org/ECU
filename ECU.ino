@@ -22,6 +22,7 @@ void setup() {
 
 void loop() {
     static int counter = 0;
+    static int missed_tsen = 0;
     delay(1000);
 
     Serial.println("--------------------");
@@ -64,12 +65,20 @@ void loop() {
         }
     }
 
-//    TSEN_DATA_VECTOR tsen_data = tsen_read();
-//        Serial.println("TSEN Data:");
-//        for (int i = 0; i < tsen_data.size(); i++) {
-//            Serial.print(tsen_data[i]);
-//        }
-//        Serial.println();
+    TSEN_DATA_VECTOR tsen_data = tsen_read();
+    if (tsen_data.size() == 19 && tsen_data[0] == '#') {
+        Serial.print("TSEN Data: ");
+        for (int i = 1; i < tsen_data.size()-1; i++) {
+            Serial.print(tsen_data[i]);
+        }
+        Serial.println();
+    } else {
+        missed_tsen++;
+        if (missed_tsen > 5) {
+            tsen_prompt();
+            missed_tsen = 0;
+        }
+    }
 
     // RS41
     ecu_report.rs41_valid = false;

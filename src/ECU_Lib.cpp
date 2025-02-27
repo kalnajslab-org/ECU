@@ -106,45 +106,33 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
     digitalWrite(V12_EN, enable);
   }
 
+  TSEN_DATA_VECTOR tsen_read() {
+    static TSEN_DATA_VECTOR buffer;
+    static TSEN_DATA_VECTOR empty_buffer;
+
+    while (ECU_TSEN_SERIAL.available() > 0) {
+        char c = ECU_TSEN_SERIAL.read();
+        buffer.push_back(c);
+
+        // Check if the buffer contains the start character '#'
+        if (buffer.front() != '#') {
+            buffer.clear();
+            continue;
+        }
+
+        // Check if the buffer contains the end character '\r'
+        if (c == '\r') {
+            TSEN_DATA_VECTOR result = buffer;
+            buffer.clear();
+            tsen_prompt();
+            return result;
+        }
+    }
+    return empty_buffer;
+}
+
   void tsen_prompt() {
     ECU_TSEN_SERIAL.print("*01A?\r");
     ECU_TSEN_SERIAL.flush();
 }
 
-TSEN_DATA_VECTOR tsen_read() {
-    static TSEN_DATA_VECTOR empty_msg;
-    static TSEN_DATA_VECTOR msg;
-    int i = 0;
-    while (ECU_TSEN_SERIAL.available() > 0) {
-        char c = ECU_TSEN_SERIAL.read();
-        SerialUSB.print(i++);
-        SerialUSB.print(":");
-        SerialUSB.print(c, HEX);
-        // Wait for start character
-        if (msg.empty() && (c != '*')) {
-            continue;
-        }
-        msg.push_back(c);
-        if ((c == '\r') or msg.full()) {
-            break;
-        }
-    }
-
-    if (!msg.full()) {
-        msg.push_back('\0');
-    }
-
-    if ((msg.full()) && (msg[TSEN_MSG_LEN-1] != '\r')) {
-        SerialUSB.println("TSEN message not terminated with \\r");
-        return empty_msg;
-    }
-
-    if (msg.full()) {
-        TSEN_DATA_VECTOR ret_val = msg;
-        tsen_prompt();
-        msg.clear();
-        return ret_val;
-    }
-
-    return empty_msg;
-}
