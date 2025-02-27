@@ -68,13 +68,26 @@ void loop() {
     TSEN_DATA_VECTOR tsen_data = tsen_read();
     if (tsen_data.size() == 19 && tsen_data[0] == '#') {
         Serial.print("TSEN Data: ");
-        for (int i = 1; i < tsen_data.size()-1; i++) {
+        for (unsigned int i = 1; i < tsen_data.size()-1; i++) {
             Serial.print(tsen_data[i]);
         }
         Serial.println();
+        // TSEN_DATA_VECTOR data format:
+        // "#001 76FC44 80D4A2\r\0"
+        // Extract substrings for each sensor
+        TSEN_DATA_VECTOR airt_v; airt_v.assign(tsen_data.begin()+1, tsen_data.begin()+4); airt_v.push_back('\0');
+        TSEN_DATA_VECTOR prest_v; prest_v.assign(tsen_data.begin()+5, tsen_data.begin()+11); prest_v.push_back('\0');
+        TSEN_DATA_VECTOR pres_v; pres_v.assign(tsen_data.begin()+12, tsen_data.begin()+18); pres_v.push_back('\0');
+        // Convert substrings to unsigned integers
+        uint16_t airt_val = strtoul(airt_v.data(), NULL, 16);
+        uint32_t prest_val = strtoul(prest_v.data(), NULL, 16);
+        uint32_t pres_val = strtoul(pres_v.data(), NULL, 16);
+        // Add to the ECU report
+        add_tsen(airt_val, prest_val, pres_val, ecu_report);
     } else {
         missed_tsen++;
         if (missed_tsen > 5) {
+            // Haven't received a TSEN message in a while, prompt the TSEN
             tsen_prompt();
             missed_tsen = 0;
         }
