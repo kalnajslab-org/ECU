@@ -18,6 +18,7 @@
 // GPS
 #define ECU_GPS_SERIAL      Serial8
 #define ECU_GPS_BAUD        9600
+#define ECU_GPS_BUFFSIZE    4096    
 
 // TSEN
 #define ECU_TSEN_SERIAL     Serial4

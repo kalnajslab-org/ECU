@@ -17,9 +17,13 @@ static DallasTemperature ds18(&oneWire);
 #define R15 48.7
 #define R16 10.0
 
+static uint8_t gps_serial_RX_buffer[ECU_GPS_BUFFSIZE];
+
 bool initializeECU(int lora_report_interval_ms, RS41& rs41) {
 
     ECU_GPS_SERIAL.begin(ECU_GPS_BAUD);
+    ECU_GPS_SERIAL.addMemoryForRead(&gps_serial_RX_buffer[0], ECU_GPS_BUFFSIZE);
+
     ECU_TSEN_SERIAL.begin(ECU_TSEN_BAUD);
 
     bool success = true;
@@ -136,3 +140,96 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
     ECU_TSEN_SERIAL.flush();
 }
 
+void print_tsen(TSEN_DATA_VECTOR& tsen_data) {
+    SerialUSB.print("TSEN: ");
+    for (char c : tsen_data) {
+        SerialUSB.print(c);
+    }
+    SerialUSB.println();
+}
+
+void print_rs41(RS41::RS41SensorData_t& sensor_data) {
+    SerialUSB.print(sensor_data.frame_count);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.air_temp_degC);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.humdity_percent);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.hsensor_temp_degC);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.pres_mb);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.internal_temp_degC);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.module_status);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.module_error);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.pcb_supply_V);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.lsm303_temp_degC);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.pcb_heater_on);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.mag_hdgXY_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.mag_hdgXZ_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.mag_hdgYZ_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.accelX_mG);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.accelY_mG);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.accelZ_mG);
+    SerialUSB.println();
+
+}
+
+void print_gps(TinyGPSPlus& gps) {
+  Serial.print("Valid: ");
+  Serial.print(gps.location.isValid());
+  Serial.print(" Time:");
+  Serial.print(gps.time.hour());
+  Serial.print(":");
+  Serial.print(gps.time.minute());
+  Serial.print(":");
+  Serial.print(gps.time.second());
+  Serial.print(".");
+  Serial.print(gps.time.centisecond());
+  Serial.print(" Latitude:");
+  Serial.print(gps.location.lat(), 6);
+  Serial.print(" Longitude:");
+  Serial.print(gps.location.lng(), 6);
+  Serial.print(" Altitude:");
+  Serial.print(gps.altitude.meters());
+  Serial.print(" Speed:");
+  Serial.print(gps.speed.kmph());
+  Serial.print(" Course:");
+  Serial.print(gps.course.deg());
+  Serial.println();
+}
+
+void print_board_health(ECUBoardHealth_t& boardVals) {
+  String s;
+  s = "V5:";
+  s += boardVals.V5;
+  s += ", ";
+  //s += "12V_I:";
+  //s += analogRead(pin12V_IMON);
+  //s += ", ";
+  s += "V12:";
+  s += boardVals.V12;
+  s += ", ";
+  s += "Temp(C):";
+  s += boardVals.BoardTempC;
+  s += ", ";
+  s += "V56:";
+  s += boardVals.V56;
+  s += ", ";
+  s += "I_SW:";
+  s += boardVals.ISW;
+  s += ", HeaterOn:";
+  s += !digitalRead(HEATER_DISABLE);
+  Serial.println(s);
+}

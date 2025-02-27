@@ -2,6 +2,7 @@
 #define ECU_LIB_H
 
 #include <Arduino.h>
+#include <TinyGPSPlus.h>
 #include "ECUHardware.h"
 #include "ECULoRa.h"
 #include "RS41.h"
@@ -26,6 +27,8 @@ struct ECUBoardHealth_t {
 
 // The TSEN message length is 19 characters, plus one for the null terminator
 #define TSEN_MSG_LEN 20
+typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
+
 
 /**
  * @brief Initializes the ECU (Electronic Control Unit).
@@ -59,7 +62,14 @@ void enable12V(bool enable);
 
 void tsen_prompt();
 
-typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
 TSEN_DATA_VECTOR tsen_read();
+
+void print_tsen(TSEN_DATA_VECTOR& tsen_data);
+
+void print_rs41(RS41::RS41SensorData_t& sensor_data);
+
+void print_gps(TinyGPSPlus& gps);
+
+void print_board_health(ECUBoardHealth_t& boardVals);
 
 #endif // ECU_LIB_H
