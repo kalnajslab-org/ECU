@@ -20,7 +20,7 @@ void setup() {
 void loop() {
     static int counter = 0;
     static int missed_tsen = 0;
-    delay(1000);
+    delay(971);
 
     // Initialize the ECU report
     ecu_report_init(ecu_report);
