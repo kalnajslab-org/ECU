@@ -8,17 +8,17 @@ TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
     delay(3000);
-
     Serial.println("Build date: " __DATE__ " " __TIME__);
     Serial.println("Starting ECU...");
     initializeECU(1000, rs41);
-
 }
 
-void loop() {
+void loop()
+{
     static int counter = 0;
     static int missed_tsen = 0;
     delay(971);
@@ -32,9 +32,11 @@ void loop() {
 
     // LoRa incoming message
     ECULoRaMsg_t msg;
-    if (ecu_lora_rx(&msg)) {
+    if (ecu_lora_rx(&msg))
+    {
         String received_msg;
-        for (int i = 0; i < msg.data_len; i++) {
+        for (int i = 0; i < msg.data_len; i++)
+        {
             received_msg += (char)msg.data[i];
         }
         Serial.println(String("**** Received: ") + received_msg);
@@ -43,7 +45,8 @@ void loop() {
     // GPS
     while (ECU_GPS_SERIAL.available() > 0)
     {
-        if(ecu_gps.encode(ECU_GPS_SERIAL.read())) {
+        if (ecu_gps.encode(ECU_GPS_SERIAL.read()))
+        {
             // print_gps(ecu_gps);
             add_gps(
                 ecu_gps.location.isValid(),
@@ -54,15 +57,15 @@ void loop() {
                 ecu_gps.date.value(),
                 ecu_gps.time.value(),
                 ecu_gps.location.age() / 1000,
-                ecu_report
-            );        
+                ecu_report);
         }
     }
 
     // TSEN
     TSEN_DATA_VECTOR tsen_data = tsen_read();
-    if (tsen_data.size() == 19 && tsen_data[0] == '#') {
-        //print_tsen(tsen_data);
+    if (tsen_data.size() == 19 && tsen_data[0] == '#')
+    {
+        // print_tsen(tsen_data);
 
         // TSEN_DATA_VECTOR data format:
         // "#001 76FC44 80D4A2\r\0"
@@ -76,9 +79,12 @@ void loop() {
         uint32_t pres_val = strtoul(pres_v.data(), NULL, 16);
         // Add to the ECU report
         add_tsen(airt_val, prest_val, pres_val, ecu_report);
-    } else {
+    }
+    else
+    {
         missed_tsen++;
-        if (missed_tsen > 5) {
+        if (missed_tsen > 5)
+        {
             // Haven't received a TSEN message in a while, prompt the TSEN
             tsen_prompt();
             missed_tsen = 0;
@@ -90,8 +96,16 @@ void loop() {
     RS41::RS41SensorData_t sensor_data = rs41.decoded_sensor_data(false);
     if (sensor_data.valid)
     {
-        //print_rs41(sensor_data);
-        add_rs41(true, sensor_data.air_temp_degC, sensor_data.humdity_percent, sensor_data.hsensor_temp_degC, sensor_data.pres_mb, sensor_data.pcb_heater_on, ecu_report);
+        // print_rs41(sensor_data);
+        add_rs41(
+            true,
+            sensor_data.air_temp_degC,
+            sensor_data.humdity_percent,
+            sensor_data.hsensor_temp_degC,
+            sensor_data.pres_mb,
+            sensor_data.pcb_heater_on,
+            ecu_report
+        );
     }
     else
     {
@@ -101,20 +115,31 @@ void loop() {
     // Board health
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
-    //print_board_health(boardVals);
+    // print_board_health(boardVals);
 
-    if (boardVals.BoardTempC > 30.0) {
+    if (boardVals.BoardTempC > 30.0)
+    {
         digitalWrite(HEATER_DISABLE, HIGH);
-    } else {
+    }
+    else
+    {
         digitalWrite(HEATER_DISABLE, LOW);
     }
 
     add_status(!digitalRead(HEATER_DISABLE), ecu_report);
-    add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, boardVals.ISW, ecu_report);
+    add_ecu_health(
+        boardVals.V5,
+        boardVals.V12,
+        boardVals.V56,
+        boardVals.BoardTempC,
+        boardVals.ISW,
+        ecu_report
+    );
 
     // Serialize and transmit the ECU report
     ECUReportBytes_t payload = ecu_report_serialize(ecu_report);
-    if (!ecu_lora_tx(payload.begin(), payload.size())) {
+    if (!ecu_lora_tx(payload.begin(), payload.size()))
+    {
         Serial.println("Failed to transmit LoRa.");
     }
 
