@@ -16,6 +16,7 @@ static DallasTemperature ds18(&oneWire);
 #define R14 10.0
 #define R15 48.7
 #define R16 10.0
+#define V_PER_COUNT (3.3/1024.0)
 
 static uint8_t gps_serial_RX_buffer[ECU_GPS_BUFFSIZE];
 
@@ -37,6 +38,11 @@ bool initializeECU(int lora_report_interval_ms, RS41& rs41) {
     pinMode(V5_MON,INPUT);
     pinMode(HEATER_DISABLE,OUTPUT);
 
+    // Enable the current sensing
+    digitalWrite(SW_IMON_EN, HIGH);
+    // Set standard accuracy current sensing
+    digitalWrite(SW_I_HRES_EN, (SNS_I_HRES ? HIGH : LOW));
+  
     // Enable the 12V
     enable12V(true);
 
@@ -87,25 +93,13 @@ void getBoardHealth(ECUBoardHealth_t& boardVals) {
     }
     boardVals.BoardTempC = last_temp;
 
-    float K_SNS;
-    if (I_HRES) {
-      K_SNS = K_SNS2;
-      digitalWrite(SW_I_HRES_EN,HIGH);
-    } else {
-      K_SNS = K_SNS1;
-    }
+    boardVals.V56   = analogRead(V_ZEPHR_VMON) * (3.3/1024.0) * (R5 + R6) / R6;
+    boardVals.V5    = analogRead(V5_MON) * (3.3/1024.0) * (R13 + R14) / R14;
+    boardVals.V12   = analogRead(V12_MON) * (3.3/1024.0) * (R15 + R16) / R16;
+    uint sw_imon_count = analogRead(SW_IMON);
+    boardVals.ISW   = 1000.0 * (((sw_imon_count * 3.3)/1024.0) / R_SNS) * (SNS_I_HRES ? 24.0 : 800.0);
+}
 
-    digitalWrite(SW_IMON_EN, HIGH);
-
-    boardVals.V56 = analogRead(V_ZEPHR_VMON) * (R5 + R6) * 3.3 / (1024.0  * R6);
-    boardVals.V5    = analogRead(V5_MON) * (R13 + R14) * 3.3 / (1024.0 * R14);
-    boardVals.V12   = analogRead(V12_MON) * (R15 + R16) * 3.3 / (1024.0 * R16);
-    boardVals.ISW   = (analogRead(SW_IMON) / R_SNS) * K_SNS;
-  
-    digitalWrite(SW_IMON_EN, LOW);
-    digitalWrite(SW_I_HRES_EN, LOW);
-  }
-  
   void enable12V(bool enable) {
     digitalWrite(V12_EN, enable);
   }
@@ -215,9 +209,6 @@ void print_board_health(ECUBoardHealth_t& boardVals) {
   s = "V5:";
   s += boardVals.V5;
   s += ", ";
-  //s += "12V_I:";
-  //s += analogRead(pin12V_IMON);
-  //s += ", ";
   s += "V12:";
   s += boardVals.V12;
   s += ", ";
@@ -227,7 +218,7 @@ void print_board_health(ECUBoardHealth_t& boardVals) {
   s += "V56:";
   s += boardVals.V56;
   s += ", ";
-  s += "I_SW:";
+  s += "ISW:";
   s += boardVals.ISW;
   s += ", HeaterOn:";
   s += !digitalRead(HEATER_DISABLE);

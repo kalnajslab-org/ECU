@@ -12,6 +12,7 @@ void setup() {
     Serial.begin(115200);
     delay(3000);
 
+    Serial.println("Build date: " __DATE__ " " __TIME__);
     Serial.println("Starting ECU...");
     initializeECU(1000, rs41);
 
@@ -50,7 +51,8 @@ void loop() {
                 ecu_gps.location.lng(),
                 ecu_gps.altitude.meters(),
                 ecu_gps.satellites.value(),
-                ecu_gps.hdop.hdop(),
+                ecu_gps.date.value(),
+                ecu_gps.time.value(),
                 ecu_gps.location.age() / 1000,
                 ecu_report
             );        
@@ -108,7 +110,7 @@ void loop() {
     }
 
     add_status(!digitalRead(HEATER_DISABLE), ecu_report);
-    add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, ecu_report);
+    add_ecu_health(boardVals.V5, boardVals.V12, boardVals.V56, boardVals.BoardTempC, boardVals.ISW, ecu_report);
 
     // Serialize and transmit the ECU report
     ECUReportBytes_t payload = ecu_report_serialize(ecu_report);
