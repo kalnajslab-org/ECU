@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include "ECUHardware.h"
 #include "ECUReport.h"
 #include "ECU_Lib.h"
@@ -7,6 +8,9 @@
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
+JsonDocument ecu_json_doc;
+
+float temp_setpoint = 0;
 
 void setup()
 {
@@ -26,8 +30,6 @@ void loop()
     // Initialize the ECU report
     ecu_report_init(ecu_report);
 
-    Serial.println("--------------------");
-    Serial.println(String("Counter: ") + counter);
     counter++;
 
     // LoRa incoming message
@@ -39,7 +41,22 @@ void loop()
         {
             received_msg += (char)msg.data[i];
         }
-        Serial.println(String("**** Received: ") + received_msg);
+        DeserializationError error = deserializeJson(ecu_json_doc, received_msg);
+        if (!error)
+        {
+            // Message decoded successfully
+            Serial.println(received_msg);
+            float tempC = ecu_json_doc["tempC"] | -999.0;
+            if (tempC != -999.0)
+            {
+                temp_setpoint = tempC;
+                Serial.println("Temp setpoint: " + String(temp_setpoint));
+            } else {
+                Serial.println("Failed to decode tempC from incoming LoRa message");
+            }
+        } else {
+            Serial.println("Failed to deserialize incoming LoRa message");
+        }
     }
 
     // GPS
@@ -116,8 +133,7 @@ void loop()
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
     // print_board_health(boardVals);
-
-    if (boardVals.BoardTempC > 30.0)
+    if (boardVals.BoardTempC > temp_setpoint)
     {
         digitalWrite(HEATER_DISABLE, HIGH);
     }
@@ -125,6 +141,7 @@ void loop()
     {
         digitalWrite(HEATER_DISABLE, LOW);
     }
+    
 
     add_status(!digitalRead(HEATER_DISABLE), ecu_report);
     add_ecu_health(
@@ -144,6 +161,10 @@ void loop()
     }
 
     // Deserialize and print the ECU report
-    ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
-    ecu_report_print(ecu_report_sent, true);
+    if (!(counter % 10))
+    {
+        ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
+        ecu_report_print(ecu_report_sent, true);
+        Serial.println("--------------------");
+    }
 }
