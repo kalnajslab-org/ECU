@@ -143,7 +143,7 @@ void loop()
     }
     
 
-    add_status(!digitalRead(HEATER_DISABLE), ecu_report);
+    add_status(!digitalRead(HEATER_DISABLE), temp_setpoint, ecu_report);
     add_ecu_health(
         boardVals.V5,
         boardVals.V12,
