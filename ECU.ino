@@ -9,8 +9,7 @@ TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
 JsonDocument ecu_json_doc;
-
-float temp_setpoint = 0;
+float tempC_setpoint = 0;
 
 void setup()
 {
@@ -49,8 +48,8 @@ void loop()
             float tempC = ecu_json_doc["tempC"] | -999.0;
             if (tempC != -999.0)
             {
-                temp_setpoint = tempC;
-                Serial.println("Temp setpoint: " + String(temp_setpoint));
+                tempC_setpoint = tempC;
+                Serial.println("Temp setpoint: " + String(tempC_setpoint));
             } else {
                 Serial.println("Failed to decode tempC from incoming LoRa message");
             }
@@ -133,7 +132,7 @@ void loop()
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
     // print_board_health(boardVals);
-    if (boardVals.BoardTempC > temp_setpoint)
+    if (boardVals.BoardTempC > tempC_setpoint)
     {
         digitalWrite(HEATER_DISABLE, HIGH);
     }
@@ -143,7 +142,7 @@ void loop()
     }
     
 
-    add_status(!digitalRead(HEATER_DISABLE), temp_setpoint, ecu_report);
+    add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, ecu_report);
     add_ecu_health(
         boardVals.V5,
         boardVals.V12,
