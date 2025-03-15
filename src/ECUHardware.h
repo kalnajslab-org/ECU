@@ -23,9 +23,11 @@
 // TSEN
 #define ECU_TSEN_SERIAL     Serial4
 #define ECU_TSEN_BAUD       9600
+#define ENABLE_12V          5
 
 // RS41
 #define RS41_SERIAL         Serial1
+#define RS41_BAUD           56700
 #define RS41_EN             2
 
 // A/D port for Zephr voltage monitor
