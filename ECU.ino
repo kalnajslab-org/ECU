@@ -149,6 +149,7 @@ void loop()
         boardVals.V56,
         boardVals.BoardTempC,
         boardVals.ISW,
+        boardVals.CpuTempC,
         ecu_report
     );
 

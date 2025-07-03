@@ -23,6 +23,7 @@ struct ECUBoardHealth_t {
     float V56;
     float ISW;
     float BoardTempC;
+    float CpuTempC;
 };
 
 // The TSEN message length is 19 characters, plus one for the null terminator

@@ -104,6 +104,7 @@ void getBoardHealth(ECUBoardHealth_t &boardVals)
     boardVals.V12 = analogRead(V12_MON) * (3.3 / 1024.0) * (R15 + R16) / R16;
     uint sw_imon_count = analogRead(SW_IMON);
     boardVals.ISW = 1000.0 * (((sw_imon_count * 3.3) / 1024.0) / R_SNS) * (SNS_I_HRES ? 24.0 : 800.0);
+    boardVals.CpuTempC = tempmonGetTemp();
 }
 
 void enable12V(bool enable)
@@ -236,6 +237,8 @@ void print_board_health(ECUBoardHealth_t &boardVals)
     s += ", ";
     s += "ISW:";
     s += boardVals.ISW;
+    s += ", CpuTempC:";
+    s += boardVals.CpuTempC;
     s += ", HeaterOn:";
     s += !digitalRead(HEATER_DISABLE);
     Serial.println(s);
