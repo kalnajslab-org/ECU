@@ -45,16 +45,32 @@ void loop()
         {
             // Message decoded successfully
             Serial.println(received_msg);
-            float tempC = ecu_json_doc["tempC"] | -999.0;
-            if (tempC != -999.0)
-            {
-                tempC_setpoint = tempC;
-                Serial.println("Temp setpoint: " + String(tempC_setpoint));
-            } else {
-                Serial.println("Failed to decode tempC from incoming LoRa message");
+
+            if (ecu_json_doc.containsKey("tempC")) {
+                float tempC = ecu_json_doc["tempC"] | -999.0;
+                if (tempC != -999.0)
+                {
+                    tempC_setpoint = tempC;
+                    Serial.println("Temp setpoint: " + String(tempC_setpoint));
+                }
+                else
+                {
+                    Serial.println("Failed to decode tempC from incoming LoRa message");
+                }
             }
-        } else {
-            Serial.println("Failed to deserialize incoming LoRa message");
+
+            if (ecu_json_doc.containsKey("rs41Regen")) {
+                bool regen = ecu_json_doc["rs41Regen"];
+                if (regen)
+                {
+                    rs41.recondition();
+                    Serial.println("RS41 regeneration started");
+                }
+            }
+        }
+        else
+        {
+            Serial.println("Failed to decode incoming LoRa message");
         }
     }
 
