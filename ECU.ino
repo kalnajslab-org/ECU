@@ -10,6 +10,7 @@ ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
 JsonDocument ecu_json_doc;
 float tempC_setpoint = 0;
+bool rs41_regen_active = false;
 
 void setup()
 {
@@ -128,9 +129,16 @@ void loop()
     RS41::RS41SensorData_t sensor_data = rs41.decoded_sensor_data(false);
     if (sensor_data.valid)
     {
-        // print_rs41(sensor_data);
+        //print_rs41(sensor_data);
+        if (sensor_data.module_status==88 && sensor_data.module_error==88)
+        {
+            rs41_regen_active = true;
+        } else {
+            rs41_regen_active = false;
+        }
         add_rs41(
             true,
+            rs41_regen_active, 
             sensor_data.air_temp_degC,
             sensor_data.humdity_percent,
             sensor_data.hsensor_temp_degC,
@@ -158,7 +166,7 @@ void loop()
     }
     
 
-    add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, ecu_report);
+    add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, rs41_regen_active, ecu_report);
     add_ecu_health(
         boardVals.V5,
         boardVals.V12,
