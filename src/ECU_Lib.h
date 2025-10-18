@@ -51,16 +51,6 @@ bool initializeECU(int lora_report_interval_ms, RS41& rs41);
  */
 void getBoardHealth(ECUBoardHealth_t& boardVals);
 
-/**
- * @brief Enables or disables the 12V power supply.
- * 
- * This function enables or disables the 12V power supply by setting the digital output
- * pin connected to the 12V power supply enable pin.
- * 
- * @param enable true to enable the 12V power supply, false to disable it.
- */
-void enable12V(bool enable);
-
 void tsen_prompt();
 
 TSEN_DATA_VECTOR tsen_read();

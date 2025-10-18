@@ -45,7 +45,7 @@ bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
     digitalWrite(SW_I_HRES_EN, (SNS_I_HRES ? HIGH : LOW));
 
     // Enable the 12V
-    enable12V(true);
+    digitalWrite(V12_EN, HIGH);
 
     // Initialize the RS41
     rs41.init();
@@ -105,11 +105,6 @@ void getBoardHealth(ECUBoardHealth_t &boardVals)
     uint sw_imon_count = analogRead(SW_IMON);
     boardVals.ISW = 1000.0 * (((sw_imon_count * 3.3) / 1024.0) / R_SNS) * (SNS_I_HRES ? 24.0 : 800.0);
     boardVals.CpuTempC = tempmonGetTemp();
-}
-
-void enable12V(bool enable)
-{
-    digitalWrite(V12_EN, enable);
 }
 
 TSEN_DATA_VECTOR tsen_read()
