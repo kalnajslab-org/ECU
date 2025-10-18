@@ -68,8 +68,8 @@ void loop()
                     Serial.println("RS41 regeneration started");
                 }
             }
-            if (ecu_json_doc.containsKey("rs41Power")) {
-                bool rs41_power = ecu_json_doc["rs41Power"];
+            if (ecu_json_doc.containsKey("rs41Enable")) {
+                bool rs41_power = ecu_json_doc["rs41Enable"];
                 if (rs41_power)
                 {
                     digitalWrite(RS41_EN, HIGH);
