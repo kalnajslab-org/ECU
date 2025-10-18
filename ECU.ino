@@ -68,9 +68,29 @@ void loop()
                     Serial.println("RS41 regeneration started");
                 }
             }
-        }
-        else
-        {
+            if (ecu_json_doc.containsKey("rs41Power")) {
+                bool rs41_power = ecu_json_doc["rs41Power"];
+                if (rs41_power)
+                {
+                    digitalWrite(RS41_EN, HIGH);
+                    Serial.println("RS41 powered on");
+                } else {
+                    digitalWrite(RS41_EN, LOW);
+                    Serial.println("RS41 powered off");
+                }
+            }
+            if (ecu_json_doc.containsKey("tsenPower")) {
+                bool tsen_power = ecu_json_doc["tsenPower"];
+                if (tsen_power)
+                {
+                    digitalWrite(V12_EN, HIGH);
+                    Serial.println("TSEN powered on");
+                } else {
+                    digitalWrite(V12_EN, LOW);
+                    Serial.println("TSEN powered off");
+                }
+            }
+        } else{
             Serial.println("Failed to decode incoming LoRa message");
         }
     }
@@ -99,7 +119,6 @@ void loop()
     if (tsen_data.size() == 19 && tsen_data[0] == '#')
     {
         // print_tsen(tsen_data);
-
         // TSEN_DATA_VECTOR data format:
         // "#001 76FC44 80D4A2\r\0"
         // Extract substrings for each sensor
@@ -136,6 +155,7 @@ void loop()
         } else {
             rs41_regen_active = false;
         }
+
         add_rs41(
             true,
             rs41_regen_active, 
@@ -164,9 +184,8 @@ void loop()
     {
         digitalWrite(HEATER_DISABLE, LOW);
     }
-    
 
-    add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, rs41_regen_active, ecu_report);
+    add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, rs41_regen_active, digitalRead(RS41_EN), digitalRead(V12_EN), ecu_report);
     add_ecu_health(
         boardVals.V5,
         boardVals.V12,
