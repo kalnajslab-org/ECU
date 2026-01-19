@@ -3,16 +3,11 @@ import datetime
 import shutil
 from SCons.Script import DefaultEnvironment
 import subprocess
+from build_funcs import get_git_commit
 
 env = DefaultEnvironment()
 
 def copy_hex_file(source, target, env):
-    def get_git_commit():
-        try:
-            commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).strip().decode("utf-8")
-            return commit
-        except subprocess.CalledProcessError:
-            return "unknown"
 
     git_commit = get_git_commit()
     build_dir = env.subst("$BUILD_DIR")

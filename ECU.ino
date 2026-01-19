@@ -4,6 +4,7 @@
 #include "ECUReport.h"
 #include "ECU_Lib.h"
 #include "RS41.h"
+#include "ecu_version.h"
 
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
@@ -16,7 +17,7 @@ void setup()
 {
     Serial.begin(115200);
     delay(3000);
-    Serial.println("Build date: " __DATE__ " " __TIME__);
+    Serial.println("ECU " ECU_VERSION " Build: " __DATE__ " " __TIME__);
     Serial.println("Starting ECU...");
     initializeECU(1000, rs41);
 }
