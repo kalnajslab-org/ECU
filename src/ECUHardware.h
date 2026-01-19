@@ -10,7 +10,7 @@
 #define ECU_LORA_RST        15
 
 //LoRa Settings
-#define LORA_FREQ           868E6
+#define LORA_FREQ           868500000
 #define LORA_BW             250E3
 #define LORA_SF             9
 #define LORA_POWER          19
