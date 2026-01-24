@@ -49,6 +49,7 @@ bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
 
     // Initialize the RS41
     rs41.init();
+    Serial.println("RS41 metadata: " + rs41.meta_data());
 
     // Configure the DS18B20 temperature sensor
     ds18.begin();

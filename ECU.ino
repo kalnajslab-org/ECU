@@ -91,6 +91,15 @@ void loop()
                     Serial.println("TSEN powered off");
                 }
             }
+            if (ecu_json_doc.containsKey("rs41Metadata")) {
+                bool rs41_metadata = ecu_json_doc["rs41Metadata"];
+                if (rs41_metadata)
+                {
+                    String meta_data = rs41.meta_data();
+                    Serial.println(meta_data);
+                }
+            }
+
         } else{
             Serial.println("Failed to decode incoming LoRa message");
         }
