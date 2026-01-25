@@ -6,6 +6,7 @@
 #include "ECUHardware.h"
 #include "ECULoRa.h"
 #include "RS41.h"
+#include "ECUReport.h"
 #include "etl/vector.h"
 
 // ECU_Lib uses the DalaasTemperature library to access the DS18B20 sensor
@@ -62,5 +63,8 @@ void print_rs41(RS41::RS41SensorData_t& sensor_data);
 void print_gps(TinyGPSPlus& gps);
 
 void print_board_health(ECUBoardHealth_t& boardVals);
+
+// Prepare an RS41 metadata ECUReport.
+ECUReport_t rs41_report(RS41& rs41);    
 
 #endif // ECU_LIB_H

@@ -2,7 +2,6 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <SPI.h>
-#include "ECULoRa.h"
 
 #define DS_RESOLUTION 12
 
@@ -238,4 +237,30 @@ void print_board_health(ECUBoardHealth_t &boardVals)
     s += ", HeaterOn:";
     s += !digitalRead(HEATER_DISABLE);
     Serial.println(s);
+}
+
+ECUReport_t rs41_report(RS41& rs41)
+{
+    // Declare an ECU report for the RS41 metadata
+    ECUReport_t rs41_metadata_report;
+
+    // Fetch RS41 metadata 
+    String meta_data = "RSS421 " + rs41.meta_data();
+
+    // Prepare the ECU report for type ECU_REPORT_RAW
+    rs41_metadata_report.rev = ECU_REPORT_REV;
+    rs41_metadata_report.msg_type = ECU_REPORT_RAW;
+
+    // Copy the metadata into the raw data field of the report
+    rs41_metadata_report.n_bytes = min(meta_data.length(), ECU_MAX_RAW_BYTES);
+    memcpy(rs41_metadata_report.raw, meta_data.c_str(), rs41_metadata_report.n_bytes);
+
+    // Serialize and deserialize the report to verify correctness
+    //auto payload = ecu_report_serialize(rs41_metadata_report);
+    //auto deserialized_report = ecu_report_deserialize(payload);
+    //Serial.print("Deserialized RS41 metadata: ");
+    //ecu_report_print_raw(deserialized_report);
+    //Serial.println();
+
+    return rs41_metadata_report;
 }

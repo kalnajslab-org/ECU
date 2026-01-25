@@ -26,6 +26,7 @@ void loop()
 {
     static int counter = 0;
     static int missed_tsen = 0;
+    static bool rs41_metadata_requested = false;
     delay(971);
 
     // Initialize the ECU report
@@ -95,8 +96,7 @@ void loop()
                 bool rs41_metadata = ecu_json_doc["rs41Metadata"];
                 if (rs41_metadata)
                 {
-                    String meta_data = rs41.meta_data();
-                    Serial.println(meta_data);
+                    rs41_metadata_requested = true;
                 }
             }
 
@@ -206,18 +206,39 @@ void loop()
         ecu_report
     );
 
-    // Serialize and transmit the ECU report
-    ECUReportBytes_t payload = ecu_report_serialize(ecu_report);
-    if (!ecu_lora_tx(payload.begin(), payload.size()))
+    // Transmit reports. Only one type: regular ECU report or RS41 metadata report
+    // will be sent per loop iteration.
+    if (!rs41_metadata_requested)
     {
-        Serial.println("Failed to transmit LoRa.");
+        // Serialize and transmit the ECU report
+        auto payload = ecu_report_serialize(ecu_report);
+        if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(ecu_report)))
+        {
+            Serial.println("Failed to transmit LoRa.");
+        }
+        if (!(counter % 10))
+        {
+            // Deserialize (for verification) and print the ECU report
+            ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
+            ecu_report_print(ecu_report_sent, true);
+            Serial.println("--------------------");
+        }
     }
-
-    // Deserialize and print the ECU report
-    if (!(counter % 10))
+    else
     {
-        ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
-        ecu_report_print(ecu_report_sent, true);
-        Serial.println("--------------------");
+        if (rs41_metadata_requested)
+        {
+            // RS41 metadata report
+            rs41_metadata_requested = false;
+            auto report = rs41_report(rs41);
+            auto payload = ecu_report_serialize(report);
+            Serial.print("Sending:");
+            ecu_report_print_raw(report);
+            Serial.println();
+            if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(report)))
+            {
+                Serial.println("Failed to transmit LoRa.");
+            }
+        }
     }
 }
