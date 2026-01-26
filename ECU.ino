@@ -187,6 +187,7 @@ void loop()
             sensor_data.humdity_percent,
             sensor_data.hsensor_temp_degC,
             sensor_data.pres_mb,
+            sensor_data.mag_hdgXY_deg,
             sensor_data.pcb_heater_on,
             ecu_report
         );
