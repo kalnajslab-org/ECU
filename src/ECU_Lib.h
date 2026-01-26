@@ -42,6 +42,9 @@ typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
  */
 bool initializeECU(int lora_report_interval_ms, RS41& rs41);
 
+// Return the ecu_id
+uint8_t ecu_id();
+
 /**
  * @brief Gets the health of the ECU board.
  * 

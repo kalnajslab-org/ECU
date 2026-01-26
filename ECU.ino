@@ -30,7 +30,7 @@ void loop()
     delay(971);
 
     // Initialize the ECU report
-    ecu_report_init(ecu_report);
+    ecu_report_init(ecu_report, ecu_id());
 
     counter++;
 
@@ -165,7 +165,21 @@ void loop()
         } else {
             rs41_regen_active = false;
         }
+        /**
+        Serial.print("RS41 Mag: XY=");
+        Serial.print(sensor_data.mag_hdgXY_deg);
+        Serial.print(" XZ=");
+        Serial.print(sensor_data.mag_hdgXZ_deg);
+        Serial.print(" YZ=");
+        Serial.print(sensor_data.mag_hdgYZ_deg);
 
+        Serial.print(" Accel: X=");
+        Serial.print(sensor_data.accelX_mG);
+        Serial.print(" Y=");
+        Serial.print(sensor_data.accelY_mG);
+        Serial.print(" Z=");
+        Serial.println(sensor_data.accelZ_mG);
+        */ 
         add_rs41(
             true,
             rs41_regen_active, 

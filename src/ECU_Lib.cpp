@@ -1,4 +1,5 @@
 #include "ECU_Lib.h"
+#include <TeensyID.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <SPI.h>
@@ -18,6 +19,7 @@ static DallasTemperature ds18(&oneWire);
 #define V_PER_COUNT (3.3 / 1024.0)
 
 static uint8_t gps_serial_RX_buffer[ECU_GPS_BUFFSIZE];
+static uint8_t mac_address[6];
 
 bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
 {
@@ -85,7 +87,20 @@ bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
         Serial.println("LoRa Initialized Successfully!");
     }
 
+    // Get the MAC address to use as ECU ID
+    teensyMAC(mac_address);
+    Serial.print("ECU MAC Address: ");
+    for (int i = 0; i < 6; ++i) {
+        if (i > 0) Serial.print(":");
+        Serial.print(mac_address[i], HEX);
+    }
+    Serial.println();
     return success;
+}
+
+uint8_t ecu_id()
+{
+    return mac_address[5];
 }
 
 void getBoardHealth(ECUBoardHealth_t &boardVals)
