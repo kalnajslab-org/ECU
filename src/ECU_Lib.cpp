@@ -265,6 +265,7 @@ ECUReport_t rs41_report(RS41& rs41)
     // Prepare the ECU report for type ECU_REPORT_RAW
     rs41_metadata_report.rev = ECU_REPORT_REV;
     rs41_metadata_report.msg_type = ECU_REPORT_RAW;
+    rs41_metadata_report.ecu_id = ecu_id();
 
     // Copy the metadata into the raw data field of the report
     rs41_metadata_report.n_bytes = min(meta_data.length(), ECU_MAX_RAW_BYTES);
