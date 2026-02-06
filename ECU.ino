@@ -217,14 +217,9 @@ void loop()
     ECUBoardHealth_t boardVals;
     getBoardHealth(boardVals);
     // print_board_health(boardVals);
-    if (boardVals.BoardTempC > tempC_setpoint)
-    {
-        digitalWrite(HEATER_DISABLE, HIGH);
-    }
-    else
-    {
-        digitalWrite(HEATER_DISABLE, LOW);
-    }
+
+    // Control ECU heater based on board temperature and setpoint
+    manage_heater(boardVals.BoardTempC, tempC_setpoint);
 
     add_status(!digitalRead(HEATER_DISABLE), tempC_setpoint, rs41_regen_active, digitalRead(RS41_EN), digitalRead(V12_EN), ecu_report);
     add_ecu_health(

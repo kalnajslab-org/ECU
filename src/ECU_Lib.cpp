@@ -167,6 +167,22 @@ void print_tsen(TSEN_DATA_VECTOR &tsen_data)
     SerialUSB.println();
 }
 
+void manage_heater(float board_temp_C, float temp_setpoint_C)
+{
+    static bool heater_disabled = false;
+
+    if (!heater_disabled && board_temp_C > temp_setpoint_C + BOARD_TEMP_HYSTERESIS_C)
+    {
+        digitalWrite(HEATER_DISABLE, HIGH);
+        heater_disabled = true;
+    }
+    else if (heater_disabled && board_temp_C < temp_setpoint_C - BOARD_TEMP_HYSTERESIS_C)
+    {
+        digitalWrite(HEATER_DISABLE, LOW);
+        heater_disabled = false;
+    }
+}
+
 void print_rs41(RS41::RS41SensorData_t &sensor_data)
 {
     SerialUSB.print(sensor_data.frame_count);

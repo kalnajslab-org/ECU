@@ -18,6 +18,8 @@
 // because it fixes serious bugs in the standard Arduino OneWire library. 
 // Fortunately this library is selected by default in the Teensyduino package.
 
+// The hysteresis for the board heater control
+#define BOARD_TEMP_HYSTERESIS_C 2.0
 struct ECUBoardHealth_t {
     float V12;
     float V5;
@@ -60,6 +62,13 @@ void tsen_prompt();
 TSEN_DATA_VECTOR tsen_read();
 
 void print_tsen(TSEN_DATA_VECTOR& tsen_data);
+
+// Manage the ECU board heater, based on the temperature setpoint and the
+// current board temperature. The heater is turned on if the board temperature
+// is below the setpoint, and turned off if the board temperature is above the
+// setpoint. A hysteresis of 2 degrees is used to prevent rapid switching of
+// the heater.
+void manage_heater(float board_temp_C, float temp_setpoint_C);
 
 void print_rs41(RS41::RS41SensorData_t& sensor_data);
 
