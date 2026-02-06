@@ -2,6 +2,7 @@
 #define ECU_LIB_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <TinyGPSPlus.h>
 #include "ECUHardware.h"
 #include "ECULoRa.h"
@@ -33,6 +34,7 @@ struct ECUBoardHealth_t {
 #define TSEN_MSG_LEN 20
 typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
 
+static JsonDocument ecu_json_doc;
 
 /**
  * @brief Initializes the ECU (Electronic Control Unit).
@@ -46,6 +48,10 @@ bool initializeECU(int lora_report_interval_ms, RS41& rs41);
 
 // Return the ecu_id
 uint8_t ecu_id();
+
+// Check for an incoming LoRa message, and process it if it is for this ECU. 
+// If the message is a request for RS41 metadata, set the flag indicating so.
+void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested);
 
 /**
  * @brief Gets the health of the ECU board.

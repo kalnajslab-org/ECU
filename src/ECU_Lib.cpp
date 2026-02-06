@@ -103,6 +103,94 @@ uint8_t ecu_id()
     return mac_address[5];
 }
 
+void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested) {
+    ECULoRaMsg_t msg;
+    if (ecu_lora_rx(&msg))
+    {
+        if (msg.data_len > 2)
+        {
+
+            // Ignore ECUReport messages, but we are interested in
+            // RATS messages which begin with <0><paired_ecu>
+            if (msg.data[0] == 0)
+            {
+                // The paired_ecu must be zero or match our ecu_id.
+                // It is contained in the second byte of the RATS message.
+                uint8_t paired_ecu = msg.data[1];
+                if (paired_ecu == 0 || paired_ecu == ecu_id())
+                {
+                    String received_msg;
+                    for (int i = 2; i < msg.data_len; i++)
+                    {
+                        received_msg += (char)msg.data[i];
+                    }
+                    DeserializationError error = deserializeJson(ecu_json_doc, received_msg);
+                    if (!error)
+                    {
+                        // Message decoded successfully
+                        Serial.println(received_msg);
+
+                        if (ecu_json_doc.containsKey("tempC")) {
+                            float tempC = ecu_json_doc["tempC"] | -999.0;
+                            if (tempC != -999.0)
+                            {
+                                tempC_setpoint = tempC;
+                                Serial.println("Temp setpoint: " + String(tempC_setpoint));
+                            }
+                            else
+                            {
+                                Serial.println("Failed to decode tempC from incoming LoRa message");
+                            }
+                        }
+
+                        if (ecu_json_doc.containsKey("rs41Regen")) {
+                            bool regen = ecu_json_doc["rs41Regen"];
+                            if (regen)
+                            {
+                                rs41.recondition();
+                                Serial.println("RS41 regeneration started");
+                            }
+                        }
+                        if (ecu_json_doc.containsKey("rs41Enable")) {
+                            bool rs41_power = ecu_json_doc["rs41Enable"];
+                            if (rs41_power)
+                            {
+                                digitalWrite(RS41_EN, HIGH);
+                                Serial.println("RS41 powered on");
+                            } else {
+                                digitalWrite(RS41_EN, LOW);
+                                Serial.println("RS41 powered off");
+                            }
+                        }
+                        if (ecu_json_doc.containsKey("tsenPower")) {
+                            bool tsen_power = ecu_json_doc["tsenPower"];
+                            if (tsen_power)
+                            {
+                                digitalWrite(V12_EN, HIGH);
+                                Serial.println("TSEN powered on");
+                            } else {
+                                digitalWrite(V12_EN, LOW);
+                                Serial.println("TSEN powered off");
+                            }
+                        }
+                        if (ecu_json_doc.containsKey("rs41Metadata")) {
+                            bool rs41_metadata = ecu_json_doc["rs41Metadata"];
+                            if (rs41_metadata)
+                            {
+                                rs41_metadata_requested = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Serial.println("Failed to decode incoming LoRa message");
+                    }
+                }
+            }
+        }
+    }
+}
+
 void getBoardHealth(ECUBoardHealth_t &boardVals)
 {
     static float last_temp = -1000.0;
