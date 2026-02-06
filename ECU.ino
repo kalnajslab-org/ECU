@@ -4,12 +4,15 @@
 #include "ECU_Lib.h"
 #include "RS41.h"
 #include "ecu_version.h"
+#include <Watchdog_t4.h>
 
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
 float tempC_setpoint = 0;
 bool rs41_regen_active = false;
+WDT_T4<WDT1> wdt;  // Use Watchdog Timer1 on Teensy 4.1
+
 
 void setup()
 {
@@ -17,6 +20,18 @@ void setup()
     delay(3000);
     Serial.println("ECU " ECU_VERSION " Build: " __DATE__ " " __TIME__);
     Serial.println("Starting ECU...");
+
+    // Initialize WDT with a 10 second timeout. The callback is not used, 
+    // but the WDT will reset the board if the timeout expires.
+    WDT_timings_t config;
+    config.timeout = 10; /* in seconds, 0->128 for watchdog reboot */
+    wdt.begin(config);
+  
+    if (wdt.expired()) {
+         SerialUSB.println("Reset caused by watchdog");
+    }
+
+    // Initialize the ECU and peripherals. 
     initializeECU(1000, rs41);
 }
 
@@ -25,6 +40,12 @@ void loop()
     static int counter = 0;
     static int missed_tsen = 0;
     static bool rs41_metadata_requested = false;
+
+    // Reset the watchdog timer at the beginning of each loop iteration
+    wdt.feed();
+
+    // This delay sets the base loop time, which determines the frequency measurements and ECUReports.
+    // It is empirally set to 971ms to achieve a loop time of approximately 1 second.
     delay(971);
 
     // Initialize the ECU report
@@ -32,7 +53,8 @@ void loop()
 
     counter++;
 
-    // LoRa incoming message
+    // Handle LoRa incoming messages and set flags for actions to take in the main loop, 
+    // such as requesting RS41 metadata or changing the temperature setpoint.
     process_lora(tempC_setpoint, rs41, rs41_metadata_requested);
 
     // GPS
