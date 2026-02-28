@@ -6,6 +6,13 @@
 #include "ecu_version.h"
 #include <Watchdog_t4.h>
 
+// The period for when a sample is transmitted
+#define SAMPLE_MILLIS 2000
+// The period for when the ECU report is printed to the serial console
+#define PRINT_MILLIS 10000
+
+elapsedMillis sample_timer;
+elapsedMillis print_timer;
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
@@ -37,21 +44,15 @@ void setup()
 
 void loop()
 {
-    static int counter = 0;
     static int missed_tsen = 0;
     static bool rs41_metadata_requested = false;
 
     // Reset the watchdog timer at the beginning of each loop iteration
     wdt.feed();
 
-    // This delay sets the base loop time, which determines the frequency measurements and ECUReports.
-    // It is empirally set to 971ms to achieve a loop time of approximately 1 second.
-    delay(971);
-
     // Initialize the ECU report
     ecu_report_init(ecu_report, ecu_id());
 
-    counter++;
 
     // Handle LoRa incoming messages and set flags for actions to take in the main loop, 
     // such as requesting RS41 metadata or changing the temperature setpoint.
@@ -170,20 +171,16 @@ void loop()
 
     // Transmit reports. Only one type: regular ECU report or RS41 metadata report
     // will be sent per loop iteration.
-    if (!rs41_metadata_requested)
+    if (!rs41_metadata_requested && sample_timer > SAMPLE_MILLIS)
     {
+        sample_timer = 0;
         // Serialize and transmit the ECU report
         auto payload = ecu_report_serialize(ecu_report);
         if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(ecu_report)))
         {
             Serial.println("Failed to transmit LoRa.");
-        }
-        if (!(counter % 10))
-        {
-            // Deserialize (for verification) and print the ECU report
-            ECUReport_t ecu_report_sent = ecu_report_deserialize(payload);
-            ecu_report_print(ecu_report_sent, true);
-            Serial.println("--------------------");
+        } else {
+            Serial.println("Sent ECUReport");
         }
     }
     else
@@ -203,4 +200,14 @@ void loop()
             }
         }
     }
+    if (print_timer > PRINT_MILLIS)
+    {
+        print_timer = 0;
+        // Deserialize (for verification) and print the ECU report
+        auto payload = ecu_report_serialize(ecu_report);
+        auto ecu_report_sent = ecu_report_deserialize(payload);
+        ecu_report_print(ecu_report_sent, true);
+        Serial.println("--------------------");
+    }
+
 }
