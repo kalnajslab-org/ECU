@@ -6,11 +6,16 @@
 #include "ecu_version.h"
 #include <Watchdog_t4.h>
 
+// The minimum time between LoRa transmissions. This is important to prevent 
+// flooding the LoRa channel, which can cause packet loss and communication //
+// issues.
+#define LORA_MIN_TX_MILLIS 1000
 // The period for when a sample is transmitted
 #define SAMPLE_MILLIS 2000
 // The period for when the ECU report is printed to the serial console
 #define PRINT_MILLIS 10000
 
+elapsedMillis lora_tx_timer;
 elapsedMillis sample_timer;
 elapsedMillis print_timer;
 TinyGPSPlus ecu_gps;
@@ -19,6 +24,7 @@ RS41 rs41(RS41_SERIAL, RS41_EN);
 float tempC_setpoint = 0;
 bool rs41_regen_active = false;
 WDT_T4<WDT1> wdt;  // Use Watchdog Timer1 on Teensy 4.1
+static bool rs41_metadata_requested = false;
 
 
 void setup()
@@ -45,7 +51,6 @@ void setup()
 void loop()
 {
     static int missed_tsen = 0;
-    static bool rs41_metadata_requested = false;
 
     // Reset the watchdog timer at the beginning of each loop iteration
     wdt.feed();
@@ -171,9 +176,10 @@ void loop()
 
     // Transmit reports. Only one type: regular ECU report or RS41 metadata report
     // will be sent per loop iteration.
-    if (!rs41_metadata_requested && sample_timer > SAMPLE_MILLIS)
+    if (!rs41_metadata_requested && sample_timer > SAMPLE_MILLIS && lora_tx_timer > LORA_MIN_TX_MILLIS)
     {
         sample_timer = 0;
+        lora_tx_timer = 0;
         // Serialize and transmit the ECU report
         auto payload = ecu_report_serialize(ecu_report);
         if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(ecu_report)))
@@ -183,23 +189,23 @@ void loop()
             Serial.println("Sent ECUReport");
         }
     }
-    else
+    
+    if (rs41_metadata_requested && lora_tx_timer > LORA_MIN_TX_MILLIS)
     {
-        if (rs41_metadata_requested)
+        // RS41 metadata report
+        rs41_metadata_requested = false;
+        lora_tx_timer = 0;
+        auto report = rs41_report(rs41);
+        auto payload = ecu_report_serialize(report);
+        Serial.print("Sending:");
+        ecu_report_print_raw(report);
+        Serial.println();
+        if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(report)))
         {
-            // RS41 metadata report
-            rs41_metadata_requested = false;
-            auto report = rs41_report(rs41);
-            auto payload = ecu_report_serialize(report);
-            Serial.print("Sending:");
-            ecu_report_print_raw(report);
-            Serial.println();
-            if (!ecu_lora_tx(payload.begin(), ecu_report_serialized_size(report)))
-            {
-                Serial.println("Failed to transmit LoRa.");
-            }
+            Serial.println("Failed to transmit LoRa.");
         }
     }
+
     if (print_timer > PRINT_MILLIS)
     {
         print_timer = 0;
