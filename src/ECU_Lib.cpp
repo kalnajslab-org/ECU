@@ -85,6 +85,11 @@ bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
     else
     {
         Serial.println("LoRa Initialized Successfully!");
+        ECULoRaConfig_t cfg = ecu_lora_get_config();
+        Serial.print("  Freq: "); Serial.print(cfg.frequency); Serial.println(" Hz");
+        Serial.print("  BW: "); Serial.print(cfg.bandwidth); Serial.println(" Hz");
+        Serial.print("  SF: "); Serial.println(cfg.sf);
+        Serial.print("  Power: "); Serial.println(cfg.power);
     }
 
     // Get the MAC address to use as ECU ID
