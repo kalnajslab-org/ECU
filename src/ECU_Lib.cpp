@@ -300,17 +300,25 @@ void print_rs41(RS41::RS41SensorData_t &sensor_data)
     SerialUSB.print(",");
     SerialUSB.print(sensor_data.pcb_heater_on);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.mag_hdgXY_deg);
+    SerialUSB.print(sensor_data.magX_mG);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.mag_hdgXZ_deg);
+    SerialUSB.print(sensor_data.magY_mG);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.mag_hdgYZ_deg);
+    SerialUSB.print(sensor_data.magZ_mG);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.accelX_mG);
+    SerialUSB.print(sensor_data.accelX_mg);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.accelY_mG);
+    SerialUSB.print(sensor_data.accelY_mg);
     SerialUSB.print(",");
-    SerialUSB.print(sensor_data.accelZ_mG);
+    SerialUSB.print(sensor_data.accelZ_mg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.roll_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.pitch_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.heading_deg);
+    SerialUSB.print(",");
+    SerialUSB.print(sensor_data.orientation_quality);
     SerialUSB.println();
 }
 

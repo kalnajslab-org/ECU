@@ -124,20 +124,20 @@ void loop()
             rs41_regen_active = false;
         }
         /**
-        Serial.print("RS41 Mag: XY=");
-        Serial.print(sensor_data.mag_hdgXY_deg);
-        Serial.print(" XZ=");
-        Serial.print(sensor_data.mag_hdgXZ_deg);
-        Serial.print(" YZ=");
-        Serial.print(sensor_data.mag_hdgYZ_deg);
+        Serial.print("RS41 Mag: X=");
+        Serial.print(sensor_data.magX_mG);
+        Serial.print(" Y=");
+        Serial.print(sensor_data.magY_mG);
+        Serial.print(" Z=");
+        Serial.print(sensor_data.magZ_mG);
 
         Serial.print(" Accel: X=");
-        Serial.print(sensor_data.accelX_mG);
+        Serial.print(sensor_data.accelX_mg);
         Serial.print(" Y=");
-        Serial.print(sensor_data.accelY_mG);
+        Serial.print(sensor_data.accelY_mg);
         Serial.print(" Z=");
-        Serial.println(sensor_data.accelZ_mG);
-        */ 
+        Serial.println(sensor_data.accelZ_mg);
+        */
         add_rs41(
             true,
             rs41_regen_active, 
@@ -145,7 +145,7 @@ void loop()
             sensor_data.humdity_percent,
             sensor_data.hsensor_temp_degC,
             sensor_data.pres_mb,
-            sensor_data.mag_hdgXY_deg,
+            sensor_data.heading_deg,
             sensor_data.pcb_heater_on,
             ecu_report
         );
