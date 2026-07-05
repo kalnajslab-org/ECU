@@ -3,3 +3,4 @@
 __pycache__/
 src/ECU.cpp
 src/ecu_version.h
+.DS_Store
