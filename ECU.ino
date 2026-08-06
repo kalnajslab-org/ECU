@@ -18,6 +18,7 @@
 elapsedMillis lora_tx_timer;
 elapsedMillis sample_timer;
 elapsedMillis print_timer;
+LoraTxSuspend_t lora_tx_suspend;
 TinyGPSPlus ecu_gps;
 ECUReport_t ecu_report;
 RS41 rs41(RS41_SERIAL, RS41_EN);
@@ -44,8 +45,13 @@ void setup()
          SerialUSB.println("Reset caused by watchdog");
     }
 
-    // Initialize the ECU and peripherals. 
+    // Initialize the ECU and peripherals.
     initializeECU(1000, rs41);
+
+    // Seed the GPS sentinel state once. ecu_report_init() (called every
+    // loop() iteration) no longer touches the gps_* fields, since add_gps()
+    // is the sole writer for them and only updates on an actual fix.
+    add_gps(false, 0.0, 0.0, 0.0, 0, 0, 0, 255, ecu_report);
 }
 
 void loop()
@@ -59,9 +65,9 @@ void loop()
     ecu_report_init(ecu_report, ecu_id());
 
 
-    // Handle LoRa incoming messages and set flags for actions to take in the main loop, 
+    // Handle LoRa incoming messages and set flags for actions to take in the main loop,
     // such as requesting RS41 metadata or changing the temperature setpoint.
-    process_lora(tempC_setpoint, rs41, rs41_metadata_requested);
+    process_lora(tempC_setpoint, rs41, rs41_metadata_requested, lora_tx_suspend);
 
     // GPS
     while (ECU_GPS_SERIAL.available() > 0)
@@ -81,6 +87,10 @@ void loop()
                 ecu_report);
         }
     }
+
+    // Update the LoRa TX suspend state (boot-time suspend, or a previous
+    // loraSuspendSec command) based on current GPS validity.
+    update_lora_tx_suspend(lora_tx_suspend, ecu_gps.location.isValid());
 
     // TSEN
     TSEN_DATA_VECTOR tsen_data = tsen_read();
@@ -170,8 +180,10 @@ void loop()
     );
 
     // Transmit reports. Only one type: regular ECU report or RS41 metadata report
-    // will be sent per loop iteration.
-    if (!rs41_metadata_requested && sample_timer > SAMPLE_MILLIS && lora_tx_timer > LORA_MIN_TX_MILLIS)
+    // will be sent per loop iteration. The periodic ECU report is gated by
+    // lora_tx_suspend; a requested RS41 metadata reply is not, since it's a
+    // direct reply to a received command and must always go out.
+    if (!lora_tx_suspend.active && !rs41_metadata_requested && sample_timer > SAMPLE_MILLIS && lora_tx_timer > LORA_MIN_TX_MILLIS)
     {
         sample_timer = 0;
         lora_tx_timer = 0;

@@ -36,6 +36,26 @@ typedef etl::vector<char, TSEN_MSG_LEN> TSEN_DATA_VECTOR;
 
 static JsonDocument ecu_json_doc;
 
+// The ECU boots with LoRa TX suspended for this long, to protect GPS
+// acquisition on a passive antenna. Ends early if GPS gets a fix first.
+#define LORA_BOOT_SUSPEND_MS (2UL * 60UL * 1000UL)  // 2 minutes
+
+// Tracks a LoRa TX suspend period. The boot-time suspend is cut short as
+// soon as GPS acquires a fix (gps_override_enabled = true). A suspend
+// requested via the "loraSuspendSec" command is unconditional: it runs for
+// the full requested duration regardless of GPS validity
+// (gps_override_enabled = false).
+struct LoraTxSuspend_t {
+    bool active = true;                        // starts suspended at boot
+    elapsedMillis timer;
+    uint32_t duration_ms = LORA_BOOT_SUSPEND_MS;
+    bool gps_override_enabled = true;
+};
+
+// Clears `active` once the duration has elapsed, or (if gps_override_enabled)
+// once GPS has a valid fix. Call once per loop iteration.
+void update_lora_tx_suspend(LoraTxSuspend_t& suspend, bool gps_valid);
+
 /**
  * @brief Initializes the ECU (Electronic Control Unit).
  * 
@@ -49,9 +69,11 @@ bool initializeECU(int lora_report_interval_ms, RS41& rs41);
 // Return the ecu_id
 uint8_t ecu_id();
 
-// Check for an incoming LoRa message, and process it if it is for this ECU. 
+// Check for an incoming LoRa message, and process it if it is for this ECU.
 // If the message is a request for RS41 metadata, set the flag indicating so.
-void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested);
+// If the message is a "loraSuspendSec" command, (re)arm lora_tx_suspend.
+void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested,
+                   LoraTxSuspend_t& lora_tx_suspend);
 
 /**
  * @brief Gets the health of the ECU board.

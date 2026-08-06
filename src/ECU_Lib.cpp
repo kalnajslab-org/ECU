@@ -108,7 +108,18 @@ uint8_t ecu_id()
     return mac_address[5];
 }
 
-void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested) {
+void update_lora_tx_suspend(LoraTxSuspend_t& suspend, bool gps_valid)
+{
+    bool duration_elapsed = suspend.timer >= suspend.duration_ms;
+    bool gps_cleared = suspend.gps_override_enabled && gps_valid;
+    if (suspend.active && (duration_elapsed || gps_cleared))
+    {
+        suspend.active = false;
+    }
+}
+
+void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested,
+                   LoraTxSuspend_t& lora_tx_suspend) {
     ECULoRaMsg_t msg;
     if (ecu_lora_rx(&msg))
     {
@@ -183,6 +194,17 @@ void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_request
                             if (rs41_metadata)
                             {
                                 rs41_metadata_requested = true;
+                            }
+                        }
+                        if (ecu_json_doc.containsKey("loraSuspendSec")) {
+                            int suspend_sec = ecu_json_doc["loraSuspendSec"] | -1;
+                            if (suspend_sec >= 0)
+                            {
+                                lora_tx_suspend.active = true;
+                                lora_tx_suspend.timer = 0;
+                                lora_tx_suspend.duration_ms = (uint32_t)suspend_sec * 1000UL;
+                                lora_tx_suspend.gps_override_enabled = false;
+                                Serial.println("LoRa TX suspended for " + String(suspend_sec) + " s");
                             }
                         }
                     }
