@@ -123,29 +123,24 @@ void loop()
         } else {
             rs41_regen_active = false;
         }
-        /**
-        Serial.print("RS41 Mag: X=");
-        Serial.print(sensor_data.magX_mG);
-        Serial.print(" Y=");
-        Serial.print(sensor_data.magY_mG);
-        Serial.print(" Z=");
-        Serial.print(sensor_data.magZ_mG);
-
-        Serial.print(" Accel: X=");
-        Serial.print(sensor_data.accelX_mg);
-        Serial.print(" Y=");
-        Serial.print(sensor_data.accelY_mg);
-        Serial.print(" Z=");
-        Serial.println(sensor_data.accelZ_mg);
-        */
+        const RS41::RS41StatusFlags_t& rs41_flags = sensor_data.flags;
+        uint8_t rs41_status = (rs41_flags.high_internal_temp ? ECU_RS41_HIGH_INTERNAL_TEMP : 0u)
+                             | (rs41_flags.regen_temp_low     ? ECU_RS41_REGEN_TEMP_LOW     : 0u)
+                             | (rs41_flags.ptu_failure        ? ECU_RS41_PTU_FAILURE        : 0u)
+                             | (rs41_flags.flash_failure      ? ECU_RS41_FLASH_FAILURE      : 0u)
+                             | (rs41_flags.low_input_voltage  ? ECU_RS41_LOW_INPUT_VOLTAGE  : 0u)
+                             | (rs41_flags.not_calibrated     ? ECU_RS41_NOT_CALIBRATED     : 0u)
+                             | (rs41_flags.no_pressure_module ? ECU_RS41_NO_PRESSURE_MODULE : 0u)
+                             | (rs41_flags.disconnected_boom  ? ECU_RS41_DISCONNECTED_BOOM  : 0u);
         add_rs41(
             true,
-            rs41_regen_active, 
+            rs41_regen_active,
             sensor_data.air_temp_degC,
             sensor_data.humdity_percent,
             sensor_data.hsensor_temp_degC,
             sensor_data.pres_mb,
             sensor_data.heading_deg,
+            rs41_status,
             sensor_data.pcb_heater_on,
             ecu_report
         );
