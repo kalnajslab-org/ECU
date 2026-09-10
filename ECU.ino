@@ -48,9 +48,15 @@ void setup()
     // Initialize the ECU and peripherals.
     initializeECU(1000, rs41);
 
-    // Seed the GPS sentinel state once. ecu_report_init() (called every
-    // loop() iteration) no longer touches the gps_* fields, since add_gps()
-    // is the sole writer for them and only updates on an actual fix.
+    // Initialize the ECU report once at boot. loop() no longer
+    // re-initializes it every iteration -- ecu_report_init() is only called
+    // again after a report is actually transmitted (see below), so
+    // add_gps()/add_rs41()/add_tsen() are the sole writers of their fields
+    // and each report reflects the latest known data instead of flickering
+    // to zero/invalid on a loop that misses a sensor read.
+    ecu_report_init(ecu_report, ecu_id());
+
+    // Seed the GPS sentinel state once.
     add_gps(false, 0.0, 0.0, 0.0, 0, 0, 0, 255, ecu_report);
 }
 
@@ -60,10 +66,6 @@ void loop()
 
     // Reset the watchdog timer at the beginning of each loop iteration
     wdt.feed();
-
-    // Initialize the ECU report
-    ecu_report_init(ecu_report, ecu_id());
-
 
     // Handle LoRa incoming messages and set flags for actions to take in the main loop,
     // such as requesting RS41 metadata or changing the temperature setpoint.
@@ -122,7 +124,6 @@ void loop()
     }
 
     // RS41
-    ecu_report.rs41_valid = false;
     RS41::RS41SensorData_t sensor_data = rs41.decoded_sensor_data(false);
     if (sensor_data.valid)
     {
@@ -195,6 +196,10 @@ void loop()
         } else {
             Serial.println("Sent ECUReport");
         }
+        // Reset the report now that it's been sent, so the next report
+        // accumulates fresh sensor data across however many loop
+        // iterations it takes.
+        ecu_report_init(ecu_report, ecu_id());
     }
     
     if (rs41_metadata_requested && lora_tx_timer > LORA_MIN_TX_MILLIS)
