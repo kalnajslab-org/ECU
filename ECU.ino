@@ -2,6 +2,7 @@
 #include "ECUHardware.h"
 #include "ECUReport.h"
 #include "ECU_Lib.h"
+#include "ECUConsole.h"
 #include "RS41.h"
 #include "ecu_version.h"
 #include <Watchdog_t4.h>
@@ -71,20 +72,39 @@ void loop()
     // such as requesting RS41 metadata or changing the temperature setpoint.
     process_lora(tempC_setpoint, rs41, rs41_metadata_requested, lora_tx_suspend);
 
+    // Read console commands (bench testing only; e.g. "t" to read/set the RTC).
+    consoleRead();
+
     // GPS
     while (ECU_GPS_SERIAL.available() > 0)
     {
         if (ecu_gps.encode(ECU_GPS_SERIAL.read()))
         {
             // print_gps(ecu_gps);
+
+            // Discipline the RTC whenever the GPS has a valid date/time
+            // (which can happen before a location fix is acquired).
+            update_rtc_from_gps(ecu_gps);
+
+            // Report the GPS's date/time when valid; otherwise fall back to
+            // the RTC's best-known time (from an earlier GPS fix this
+            // power-up, a console "t" command, or a "setTimeEpoch" command
+            // from RATS), if it has been set at all.
+            uint32_t report_date = ecu_gps.date.value();
+            uint32_t report_time = ecu_gps.time.value();
+            if (!(ecu_gps.date.isValid() && ecu_gps.time.isValid()) && isRTCSet())
+            {
+                get_rtc_date_time(report_date, report_time);
+            }
+
             add_gps(
                 ecu_gps.location.isValid(),
                 ecu_gps.location.lat(),
                 ecu_gps.location.lng(),
                 ecu_gps.altitude.meters(),
                 ecu_gps.satellites.value(),
-                ecu_gps.date.value(),
-                ecu_gps.time.value(),
+                report_date,
+                report_time,
                 ecu_gps.location.age() / 1000,
                 ecu_report);
         }

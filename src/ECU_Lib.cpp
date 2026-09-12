@@ -118,6 +118,50 @@ void update_lora_tx_suspend(LoraTxSuspend_t& suspend, bool gps_valid)
     }
 }
 
+static bool RTCSet      = false;
+static bool RTCSetByGPS = false;
+
+bool isRTCSet()
+{
+    return RTCSet;
+}
+
+bool isRTCSetByGPS()
+{
+    return RTCSetByGPS;
+}
+
+void setRTCSetManually()
+{
+    RTCSet = true;
+}
+
+void update_rtc_from_gps(TinyGPSPlus& gps)
+{
+    if (gps.date.isValid() && gps.time.isValid())
+    {
+        struct tm t = {};
+        t.tm_year = gps.date.year() - 1900;
+        t.tm_mon  = gps.date.month() - 1;
+        t.tm_mday = gps.date.day();
+        t.tm_hour = gps.time.hour();
+        t.tm_min  = gps.time.minute();
+        t.tm_sec  = gps.time.second();
+        Teensy3Clock.set(mktime(&t));
+        RTCSet      = true;
+        RTCSetByGPS = true;
+    }
+}
+
+void get_rtc_date_time(uint32_t& date, uint32_t& time)
+{
+    time_t rtc_epoch = Teensy3Clock.get();
+    struct tm* t = gmtime(&rtc_epoch);
+    uint32_t yy = (uint32_t)(t->tm_year + 1900) % 100;
+    date = (uint32_t)t->tm_mday * 10000 + (uint32_t)(t->tm_mon + 1) * 100 + yy;
+    time = (uint32_t)t->tm_hour * 1000000 + (uint32_t)t->tm_min * 10000 + (uint32_t)t->tm_sec * 100;
+}
+
 void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_requested,
                    LoraTxSuspend_t& lora_tx_suspend) {
     ECULoRaMsg_t msg;
@@ -194,6 +238,23 @@ void process_lora(float& tempC_setpoint, RS41& rs41, bool& rs41_metadata_request
                             if (rs41_metadata)
                             {
                                 rs41_metadata_requested = true;
+                            }
+                        }
+                        if (ecu_json_doc.containsKey("setTimeEpoch")) {
+                            uint32_t epoch = ecu_json_doc["setTimeEpoch"] | 0UL;
+                            if (epoch == 0)
+                            {
+                                Serial.println("Failed to decode setTimeEpoch from incoming LoRa message");
+                            }
+                            else if (isRTCSetByGPS())
+                            {
+                                Serial.println("setTimeEpoch: RTC already set by GPS; refusing");
+                            }
+                            else
+                            {
+                                Teensy3Clock.set(epoch);
+                                setRTCSetManually();
+                                Serial.println("RTC set from RATS: epoch=" + String(epoch));
                             }
                         }
                         if (ecu_json_doc.containsKey("loraSuspendSec")) {
