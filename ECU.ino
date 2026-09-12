@@ -78,37 +78,44 @@ void loop()
     // GPS
     while (ECU_GPS_SERIAL.available() > 0)
     {
-        if (ecu_gps.encode(ECU_GPS_SERIAL.read()))
-        {
-            // print_gps(ecu_gps);
-
-            // Discipline the RTC whenever the GPS has a valid date/time
-            // (which can happen before a location fix is acquired).
-            update_rtc_from_gps(ecu_gps);
-
-            // Report the GPS's date/time when valid; otherwise fall back to
-            // the RTC's best-known time (from an earlier GPS fix this
-            // power-up, a console "t" command, or a "setTimeEpoch" command
-            // from RATS), if it has been set at all.
-            uint32_t report_date = ecu_gps.date.value();
-            uint32_t report_time = ecu_gps.time.value();
-            if (!(ecu_gps.date.isValid() && ecu_gps.time.isValid()) && isRTCSet())
-            {
-                get_rtc_date_time(report_date, report_time);
-            }
-
-            add_gps(
-                ecu_gps.location.isValid(),
-                ecu_gps.location.lat(),
-                ecu_gps.location.lng(),
-                ecu_gps.altitude.meters(),
-                ecu_gps.satellites.value(),
-                report_date,
-                report_time,
-                ecu_gps.location.age() / 1000,
-                ecu_report);
-        }
+        ecu_gps.encode(ECU_GPS_SERIAL.read());
     }
+    // print_gps(ecu_gps);
+
+    // Discipline the RTC whenever the GPS currently has a valid location fix
+    // (see update_rtc_from_gps() for why this is gated on location, not just
+    // date/time, validity). Done every loop iteration -- not just when a new
+    // sentence decodes -- so it isn't skipped when the GPS produces no
+    // serial data at all (e.g. no GPS module connected, bench testing).
+    update_rtc_from_gps(ecu_gps);
+
+    // Report the GPS's date/time when it has a valid fix; otherwise fall
+    // back to the RTC's best-known time (from an earlier GPS fix this
+    // power-up, a console "t" command, or a "setTimeEpoch" command from
+    // RATS), if it has been set at all. Also done every loop iteration for
+    // the same reason: TinyGPSPlus's accessors return the last-known cached
+    // state regardless of whether new data arrived this iteration, so
+    // re-evaluating here doesn't reintroduce the flicker that add_gps()'s
+    // "only call on new data" convention (see ecu_report_init()) guards
+    // against.
+    bool gps_valid = ecu_gps.location.isValid();
+    uint32_t report_date = ecu_gps.date.value();
+    uint32_t report_time = ecu_gps.time.value();
+    if (!gps_valid && isRTCSet())
+    {
+        get_rtc_date_time(report_date, report_time);
+    }
+
+    add_gps(
+        gps_valid,
+        ecu_gps.location.lat(),
+        ecu_gps.location.lng(),
+        ecu_gps.altitude.meters(),
+        ecu_gps.satellites.value(),
+        report_date,
+        report_time,
+        ecu_gps.location.age() / 1000,
+        ecu_report);
 
     // Update the LoRa TX suspend state (boot-time suspend, or a previous
     // loraSuspendSec command) based on current GPS validity.

@@ -138,7 +138,13 @@ void setRTCSetManually()
 
 void update_rtc_from_gps(TinyGPSPlus& gps)
 {
-    if (gps.date.isValid() && gps.time.isValid())
+    // Gated on location validity (a real fix), not just date/time validity:
+    // some GPS chips mark date/time "valid" (parseable, checksum-good) as
+    // soon as they decode any satellite subframe, sometimes with a
+    // placeholder/reset-default time, well before ever achieving a fix.
+    // This matches the report's own gps_valid semantics (location-based)
+    // and RPU's reference implementation.
+    if (gps.location.isValid())
     {
         struct tm t = {};
         t.tm_year = gps.date.year() - 1900;
