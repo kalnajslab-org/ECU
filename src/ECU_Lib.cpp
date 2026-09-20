@@ -21,11 +21,49 @@ static DallasTemperature ds18(&oneWire);
 static uint8_t gps_serial_RX_buffer[ECU_GPS_BUFFSIZE];
 static uint8_t mac_address[6];
 
+// u-blox GPS dynamic platform model values (UBX-CFG-NAV5 dynModel field).
+#define GPS_DYNMODEL_AIRBORNE_1G 6
+
+// Sets the u-blox receiver's dynamic platform model to "Airborne <1g" by
+// sending a UBX-CFG-NAV5 message. The receiver's default "Portable" model
+// stops reporting valid fixes around 12 km altitude, well below stratospheric
+// balloon float altitudes, so this must be set for the GPS to work in flight.
+//
+// This is sent to RAM only (no UBX-CFG-CFG save to flash) and re-sent on
+// every boot: it's a small, fast, idempotent write, and avoids wearing out
+// the receiver's flash with a save on every power-up.
+static void configure_gps_airborne_mode(Stream &gpsSerial)
+{
+    // UBX-CFG-NAV5 (class 0x06, id 0x24), 36-byte payload. mask = 0x0001
+    // selects only the dynModel field; all other payload fields are ignored
+    // by the receiver and left zeroed.
+    uint8_t msg[44] = {
+        0xB5, 0x62,                     // sync chars
+        0x06, 0x24,                     // class, id
+        0x24, 0x00,                     // payload length = 36
+        0x01, 0x00,                     // mask = dynModel only
+        GPS_DYNMODEL_AIRBORNE_1G,       // dynModel
+        // remaining payload bytes left at 0
+    };
+
+    // UBX checksum (8-bit Fletcher) over class, id, length, and payload.
+    uint8_t ck_a = 0, ck_b = 0;
+    for (int i = 2; i < 42; i++) {
+        ck_a += msg[i];
+        ck_b += ck_a;
+    }
+    msg[42] = ck_a;
+    msg[43] = ck_b;
+
+    gpsSerial.write(msg, sizeof(msg));
+}
+
 bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
 {
 
     ECU_GPS_SERIAL.begin(ECU_GPS_BAUD);
     ECU_GPS_SERIAL.addMemoryForRead(&gps_serial_RX_buffer[0], ECU_GPS_BUFFSIZE);
+    configure_gps_airborne_mode(ECU_GPS_SERIAL);
 
     ECU_TSEN_SERIAL.begin(ECU_TSEN_BAUD);
 
