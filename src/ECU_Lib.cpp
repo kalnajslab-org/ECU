@@ -24,6 +24,134 @@ static uint8_t mac_address[6];
 // u-blox GPS dynamic platform model values (UBX-CFG-NAV5 dynModel field).
 #define GPS_DYNMODEL_AIRBORNE_1G 6
 
+// Reads one incoming UBX frame from gpsSerial, scanning past any interleaved
+// NMEA/other bytes and validating the frame's checksum. On success, fills
+// out_class/out_id/out_payload/out_payload_len and returns true. A payload
+// longer than max_payload_len is rejected (skipped, scanning continues).
+// Blocks the caller for up to timeout_ms waiting for a complete, valid frame.
+static bool read_ubx_frame(Stream &gpsSerial, uint8_t &out_class, uint8_t &out_id,
+                            uint8_t *out_payload, uint16_t max_payload_len,
+                            uint16_t &out_payload_len, uint32_t timeout_ms)
+{
+    elapsedMillis elapsed;
+    enum { SYNC1, SYNC2, CLASS, ID, LEN1, LEN2, PAYLOAD, CK_A, CK_B } state = SYNC1;
+    uint16_t len = 0, idx = 0;
+    uint8_t cls = 0, id = 0;
+    uint8_t ck_a = 0, ck_b = 0;
+
+    while (elapsed < timeout_ms) {
+        if (!gpsSerial.available()) continue;
+        uint8_t b = gpsSerial.read();
+
+        switch (state) {
+        case SYNC1:
+            state = (b == 0xB5) ? SYNC2 : SYNC1;
+            break;
+        case SYNC2:
+            state = (b == 0x62) ? CLASS : SYNC1;
+            ck_a = ck_b = 0;
+            break;
+        case CLASS:
+            cls = b; ck_a += b; ck_b += ck_a; state = ID;
+            break;
+        case ID:
+            id = b; ck_a += b; ck_b += ck_a; state = LEN1;
+            break;
+        case LEN1:
+            len = b; ck_a += b; ck_b += ck_a; state = LEN2;
+            break;
+        case LEN2:
+            len |= (uint16_t)b << 8; ck_a += b; ck_b += ck_a;
+            idx = 0;
+            if (len > max_payload_len) { state = SYNC1; break; } // too big; resync
+            state = (len == 0) ? CK_A : PAYLOAD;
+            break;
+        case PAYLOAD:
+            out_payload[idx++] = b; ck_a += b; ck_b += ck_a;
+            if (idx == len) state = CK_A;
+            break;
+        case CK_A:
+            state = (b == ck_a) ? CK_B : SYNC1;
+            break;
+        case CK_B:
+            if (b == ck_b) {
+                out_class = cls;
+                out_id = id;
+                out_payload_len = len;
+                return true;
+            }
+            state = SYNC1;
+            break;
+        }
+    }
+    return false;
+}
+
+// Waits up to timeout_ms for a UBX-ACK-ACK/ACK-NAK (class 0x05, id 0x01/0x00)
+// responding to a previously-sent UBX message of the given class/id, and
+// prints the result to the console.
+static void wait_for_gps_config_ack(Stream &gpsSerial, uint8_t msg_class, uint8_t msg_id, uint32_t timeout_ms)
+{
+    elapsedMillis elapsed;
+    while (elapsed < timeout_ms) {
+        uint8_t cls, id, payload[2];
+        uint16_t payload_len;
+        if (!read_ubx_frame(gpsSerial, cls, id, payload, sizeof(payload), payload_len,
+                             timeout_ms - elapsed)) {
+            break;
+        }
+        if (cls != 0x05 || payload_len != 2 || payload[0] != msg_class || payload[1] != msg_id) {
+            continue; // not the ack we're waiting for; keep scanning
+        }
+        bool is_ack = (id == 0x01);
+        Serial.println(is_ack
+            ? "GPS CFG-NAV5 ACKed by receiver"
+            : "GPS CFG-NAV5 NAKed by receiver -- airborne mode NOT applied");
+        return;
+    }
+    Serial.println("GPS CFG-NAV5 ack timed out -- no response from receiver");
+}
+
+// Sends a UBX-CFG-NAV5 poll (empty-body request) and waits up to timeout_ms
+// for the receiver's reply, which carries its current NAV5 configuration.
+// Prints whether the live dynModel matches expected_dyn_model -- this is the
+// actual applied setting, not just an acknowledgement that a prior write was
+// accepted.
+static void verify_gps_dynmodel(Stream &gpsSerial, uint8_t expected_dyn_model, uint32_t timeout_ms)
+{
+    uint8_t poll[8] = {0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0, 0};
+    uint8_t ck_a = 0, ck_b = 0;
+    for (int i = 2; i < 6; i++) {
+        ck_a += poll[i];
+        ck_b += ck_a;
+    }
+    poll[6] = ck_a;
+    poll[7] = ck_b;
+    gpsSerial.write(poll, sizeof(poll));
+
+    elapsedMillis elapsed;
+    while (elapsed < timeout_ms) {
+        uint8_t cls, id, payload[36];
+        uint16_t payload_len;
+        if (!read_ubx_frame(gpsSerial, cls, id, payload, sizeof(payload), payload_len,
+                             timeout_ms - elapsed)) {
+            break;
+        }
+        if (cls != 0x06 || id != 0x24 || payload_len != 36) {
+            continue; // not the CFG-NAV5 reply; keep scanning
+        }
+        uint8_t actual_dyn_model = payload[2]; // dynModel is payload offset 2
+        if (actual_dyn_model == expected_dyn_model) {
+            Serial.printf("GPS dynamic platform model verified: %u\n", actual_dyn_model);
+        } else {
+            Serial.printf("GPS dynamic platform model MISMATCH: expected %u, receiver reports %u\n",
+                          expected_dyn_model, actual_dyn_model);
+        }
+        return;
+    }
+    Serial.println("GPS CFG-NAV5 poll timed out -- could not verify dynamic platform model");
+}
+
 // Sets the u-blox receiver's dynamic platform model to "Airborne <1g" by
 // sending a UBX-CFG-NAV5 message. The receiver's default "Portable" model
 // stops reporting valid fixes around 12 km altitude, well below stratospheric
@@ -56,6 +184,8 @@ static void configure_gps_airborne_mode(Stream &gpsSerial)
     msg[43] = ck_b;
 
     gpsSerial.write(msg, sizeof(msg));
+    wait_for_gps_config_ack(gpsSerial, msg[2], msg[3], 1000);
+    verify_gps_dynmodel(gpsSerial, GPS_DYNMODEL_AIRBORNE_1G, 1000);
 }
 
 bool initializeECU(int lora_report_interval_ms, RS41 &rs41)
